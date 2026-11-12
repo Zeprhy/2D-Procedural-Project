@@ -14,8 +14,8 @@ public class PlatformerMovement : MonoBehaviour
 
     [Header("Lompatan & Gravitasi (Responsive Jump)")]
     [SerializeField] private float _jumpForce = 14f;
-    [SerializeField] private float _fallMultiplier = 3f;      // Jatuh lebih mantap
-    [SerializeField] private float _lowJumpMultiplier = 2f;   // Lepas spasi lebih awal = lompat pendek
+    [SerializeField] private float _fallMultiplier = 3f;  
+    [SerializeField] private float _lowJumpMultiplier = 2f; 
 
     [Header("Deteksi Lantai (Ground Check)")]
     [SerializeField] private Transform _groundCheckPoint;
@@ -23,9 +23,10 @@ public class PlatformerMovement : MonoBehaviour
     [SerializeField] private LayerMask _groundLayer;
 
     [Header ("System Panjat Tangga 2D Step Up")]
-    [SerializeField] private float _stepHeight = 0.3f;        // Tinggi maksimal anak tangga yang bisa dipanjat
-    [SerializeField] private float _stepSearchDist = 0.4f;    // Jarak jangkauan rabaan ke depan
-    [SerializeField] private float _stepSmooth = 0.15f;       // Kecepatan dorongan naik ke tangga
+    [SerializeField] private float _stepHeight = 0.3f;       
+    [SerializeField] private float _stepSearchDist = 0.4f; 
+    [SerializeField] private float _stepSmooth = 0.15f;   
+    [SerializeField] private float _maxSlopeAngle = 45f;
 
 
     // Properti publik (dibaca oleh Player_Animator & Foot IK)
@@ -36,6 +37,7 @@ public class PlatformerMovement : MonoBehaviour
     public bool IsMoving => Mathf.Abs(_playerInput.InputX) > 0.1f;
 
     private bool _isGrounded;
+    private bool _isClimbing;
 
     private void Start()
     {
@@ -59,7 +61,9 @@ public class PlatformerMovement : MonoBehaviour
         if (Freeze) return;
 
         // Gerak Horizontal di Sumbu X (Platformer murni)
-        float targetSpeed = _playerInput.InputX * _speed;
+        float speedMultiplier = _isClimbing ? 0.6f : 1.0f; 
+        float targetSpeed = _playerInput.InputX * (_speed * speedMultiplier);
+
         float speedDiff = targetSpeed - _rigidbody.linearVelocity.x;
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? _acceleration : _deceleration;
         float movement = speedDiff * accelRate * Time.fixedDeltaTime;
@@ -83,17 +87,28 @@ public class PlatformerMovement : MonoBehaviour
     private void HandleStepClimb()
     {
         float direction = Mathf.Sign(_playerInput.InputX);
-        Vector2 originLower = new Vector2(transform.position.x, _groundCheckPoint.position.y + 0.1f);
-        Vector2 originUpper = new Vector2(transform.position.x, _groundCheckPoint.position.y + _stepHeight);
+        Vector2 originLower = new Vector2(transform.position.x + (direction * 0.1f), _groundCheckPoint.position.y + 0.08f);
+        Vector2 originUpper = new Vector2(transform.position.x + (direction * 0.1f), _groundCheckPoint.position.y + _stepHeight);
 
         // Tembak laser bawah dan laser atas ke arah jalan
         RaycastHit2D hitLower = Physics2D.Raycast(originLower, Vector2.right * direction, _stepSearchDist, _groundLayer);
         RaycastHit2D hitUpper = Physics2D.Raycast(originUpper, Vector2.right * direction, _stepSearchDist, _groundLayer);
 
         if (hitLower.collider != null && hitUpper.collider == null)
+        {   
+            float surfaceAngle = Vector2.Angle(hitLower.normal, Vector2.up);
+
+            if (surfaceAngle > _maxSlopeAngle && surfaceAngle < 85f)
+            {
+                _isClimbing = false;
+                return;
+            }
+            _isClimbing = true;
+            _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, 2.0f);
+        }
+        else
         {
-            _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, 3.5f);
-        //    _rigidbody.position += new Vector2(0f, _stepHeight * 0.25f);
+            _isClimbing = false;
         }
     }
 

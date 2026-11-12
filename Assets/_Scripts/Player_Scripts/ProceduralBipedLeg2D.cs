@@ -58,10 +58,13 @@ public class ProceduralBipedLeg2D : MonoBehaviour
         RaycastHit2D hit = Physics2D.Raycast(footHome.position + Vector3.up * 0.5f, Vector2.down, 2f, groundLayer);
         if (hit.collider != null)
         {
-            Vector3 target = new Vector3(hit.point.x, hit.point.y + footYOffset, transform.position.z);
-            transform.position = Vector3.Lerp(transform.position, target, Time.deltaTime * 15f);
-
-            AlignWithNormal(hit.normal);
+            float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
+            if (slopeAngle <= 45f)
+            {
+                Vector3 target = new Vector3(hit.point.x, hit.point.y + footYOffset, transform.position.z);
+                transform.position = Vector3.Lerp(transform.position, target, Time.deltaTime * 15f);
+                AlignWithNormal(hit.normal);
+            }
         }
     }
 
@@ -74,17 +77,21 @@ public class ProceduralBipedLeg2D : MonoBehaviour
         float dynamicDistance = stepDistance + (currentSpeed * 0.05f);
 
         float stanceX = otherLeg != null ? otherLeg.transform.position.x : footHome.position.x;
-        float targetX = stanceX + (moveDir * stepDistance);
+        float targetX = stanceX + (moveDir * dynamicDistance);
 
         // Tembak laser dari atas ke bawah untuk mencari permukaan anak tangga / lereng
-        Vector2 rayOrigin = new Vector2(targetX, footHome.position.y + 1.2f);
-        RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, 3f, groundLayer);
+        Vector2 rayOrigin = new Vector2(targetX, footHome.position.y + 1.5f);
+        RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, 4f, groundLayer);
 
         Vector3 targetPos = new Vector3(targetX, footHome.position.y, transform.position.z);
         if (hit.collider != null)
         {
-            targetPos = new Vector3(hit.point.x, hit.point.y + footYOffset, transform.position.z);
-            AlignWithNormal(hit.normal);
+            float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
+            if (slopeAngle <= 45f)
+            {
+                targetPos = new Vector3(hit.point.x, hit.point.y + footYOffset, transform.position.z);
+                AlignWithNormal(hit.normal);
+            }
         }
 
         float t = 0f;
@@ -114,7 +121,10 @@ public class ProceduralBipedLeg2D : MonoBehaviour
 
     private void AlignWithNormal(Vector2 normal)
     {
+        if (normal.y <= 0.4f) return;
+
         float angle = Mathf.Atan2(normal.y, normal.x) * Mathf.Rad2Deg - 90f;
+        angle = Mathf.Clamp(angle, -45f, 45f);
         _targetRotation = Quaternion.Euler(0, 0, angle);
     }
 
