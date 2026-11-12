@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System;
 
 public class ProceduralBipedLeg2D : MonoBehaviour
 {
@@ -8,59 +9,94 @@ public class ProceduralBipedLeg2D : MonoBehaviour
     public ProceduralBipedLeg2D otherLeg;
     public LayerMask groundLayer;
     public PlatformerMovement movement;
+    [SerializeField] private Transform gfxTransform;
+
 
     [Header("Pengaturan Langkah")]
-    public float stepDistance = 0.4f;   // Jarak sebelum melangkah
-    public float stepHeight = 0.22f;     // Tinggi angkatan kaki saat melangkah
-    public float stepSpeed = 10f;       // Ayunan kaki lebih lincah
-    public float stepOvershoot = 0.35f;
+    public float stepDistance = 0.35f;   // Jarak minimal sebelum kaki melangkah
+    public float stepHeight = 0.25f;     // Tinggi angkatan kaki saat melangkah
+    public float stepSpeed = 12f;       // Kecepatan ayunan kaki
+    public float stepOvershoot = 0.45f;  // Seberapa jauh kaki mendahului ke depan saat melangkah
     public float footYOffset = 0.05f;
 
+    public bool isMyTurn = true;
     public bool IsStepping { get; private set; } = false;
 
+    private Quaternion _targetRotation = Quaternion.identity;
     void Update()
     {
-        if (footHome == null) return;
-        if (IsStepping) return;
+        if (footHome == null || movement == null || gfxTransform == null) return;
 
-        if (otherLeg != null && otherLeg.IsStepping) return;
-
-        float diffX = footHome.position.x - transform.position.x;
-        float InputX = Input.GetAxisRaw("Horizontal");
-
-        // Saat jalan maju (inputX > 0), HANYA kaki yang tertinggal di BELAKANG (diffX > 0) yang boleh mengayun!
-        // Saat jalan mundur (inputX < 0), HANYA kaki yang tertinggal di DEPAN (diffX < 0) yang boleh mengayun!
-        bool isTrailingLeg = (InputX > 0f && diffX > stepDistance) || (InputX < 0f && diffX < -stepDistance);
-
-        if (isTrailingLeg && movement.IsGrounded)
+        if (!movement.IsGrounded)
         {
-            float moveDir = Mathf.Sign(InputX);
-            StartCoroutine(PerformStep(moveDir));
+            StopAllCoroutines();
+            IsStepping = false;
+            transform.position = Vector3.Lerp(transform.position, footHome.position, Time.deltaTime * 12f);
+            transform.rotation = Quaternion.Slerp(transform.rotation, footHome.rotation, Time.deltaTime * 12f);
+            return;
+        }
+
+        if (!movement.IsMoving && !IsStepping)
+        {   
+            SnapFootToGroundIdle();
+            return;
+        }
+
+        transform.rotation = Quaternion.Slerp(transform.rotation, _targetRotation, Time.deltaTime * 15f);
+        if (IsStepping || !isMyTurn || (otherLeg != null && otherLeg.IsStepping)) return;
+
+        float modeDir = Input.GetAxisRaw("Horizontal");
+        float distToHome = Vector2.Distance(transform.position, footHome.position);
+        if (distToHome > stepDistance)
+        {
+            StartCoroutine(PerformStep(Mathf.Sign(modeDir)));
+        }        
+    }
+
+    private void SnapFootToGroundIdle()
+    {
+        RaycastHit2D hit = Physics2D.Raycast(footHome.position + Vector3.up * 0.5f, Vector2.down, 2f, groundLayer);
+        if (hit.collider != null)
+        {
+            Vector3 target = new Vector3(hit.point.x, hit.point.y + footYOffset, transform.position.z);
+            transform.position = Vector3.Lerp(transform.position, target, Time.deltaTime * 15f);
+
+            AlignWithNormal(hit.normal);
         }
     }
 
     IEnumerator PerformStep(float moveDir)
     {
         IsStepping = true;
-        Vector3 startPos = transform.position;
+        Vector3 startPos = transform.position; 
 
-        float targetX = footHome.position.x + (moveDir * stepOvershoot);
-        Vector2 rayOrigin = new Vector2(targetX, footHome.position.y + 1f);
+        float currentSpeed = Mathf.Abs(movement.PlayerRigidbody.linearVelocity.x);
+        float dynamicDistance = stepDistance + (currentSpeed * 0.05f);
+
+        float stanceX = otherLeg != null ? otherLeg.transform.position.x : footHome.position.x;
+        float targetX = stanceX + (moveDir * stepDistance);
+
+        // Tembak laser dari atas ke bawah untuk mencari permukaan anak tangga / lereng
+        Vector2 rayOrigin = new Vector2(targetX, footHome.position.y + 1.2f);
         RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, 3f, groundLayer);
 
         Vector3 targetPos = new Vector3(targetX, footHome.position.y, transform.position.z);
         if (hit.collider != null)
         {
             targetPos = new Vector3(hit.point.x, hit.point.y + footYOffset, transform.position.z);
+            AlignWithNormal(hit.normal);
         }
 
-        float progress = 0f;
-
-        while (progress < 1f)
+        float t = 0f;
+        while (t < 1f)
         {
-            progress += Time.deltaTime * stepSpeed;
-            Vector3 currentPos = Vector3.Lerp(startPos, targetPos, progress);
-            currentPos.y += Mathf.Sin(progress * Mathf.PI) * stepHeight;
+            if (!movement.IsGrounded) break;
+
+            t += Time.deltaTime * stepSpeed;
+            float smoothT = Mathf.SmoothStep(0f, 1f, t);
+
+            Vector3 currentPos = Vector3.Lerp(startPos, targetPos, smoothT);
+            currentPos.y += Mathf.Sin(smoothT * Mathf.PI) * stepHeight;
 
             transform.position = currentPos;
             yield return null;
@@ -68,6 +104,18 @@ public class ProceduralBipedLeg2D : MonoBehaviour
 
         transform.position = targetPos;
         IsStepping = false;
+
+        if (otherLeg != null)
+        {
+            this.isMyTurn = false;
+            otherLeg.isMyTurn = true;
+        }
+    }
+
+    private void AlignWithNormal(Vector2 normal)
+    {
+        float angle = Mathf.Atan2(normal.y, normal.x) * Mathf.Rad2Deg - 90f;
+        _targetRotation = Quaternion.Euler(0, 0, angle);
     }
 
     void OnDrawGizmos()

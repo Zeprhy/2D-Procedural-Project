@@ -3,21 +3,27 @@ public class FlipToMousePos : MonoBehaviour
 {
     private Camera _main;
     private bool _lookingRight;
-    public bool LookingOnRight { get => _lookingRight; set => _lookingRight = value; }
+    public bool LookingOnRight => _lookingRight;
     void Start()
     {
         _main = FindObjectOfType<Camera>();
     }
     private void Update()
     {
-        if (Input.mousePosition.x < _main.WorldToScreenPoint(transform.position).x)
+        if (_main == null) return;
+
+        float mouseScreenX = Input.mousePosition.x;
+        float charScreenX = _main.WorldToScreenPoint(transform.position).x;
+
+        if (mouseScreenX < charScreenX)
         {
-            transform.localRotation = Quaternion.Euler(0, 180, 0);
+            transform.localScale = new Vector3(-1f, 1f, 1f);
             _lookingRight = false;
         }
         else
         {
-            transform.localRotation = Quaternion.Euler(0, 0, 0);
+            // Menghadap ke Kanan
+            transform.localScale = new Vector3(1f, 1f, 1f);
             _lookingRight = true;
         }
     }

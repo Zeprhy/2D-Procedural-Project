@@ -52,9 +52,6 @@ public class PlatformerMovement : MonoBehaviour
 
         if (Input.GetButtonDown("Jump") && _isGrounded)
             _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, _jumpForce);
-
-        if (IsMoving && _isGrounded)
-            HandleStepClimb();
     }
 
     private void FixedUpdate()
@@ -68,6 +65,9 @@ public class PlatformerMovement : MonoBehaviour
         float movement = speedDiff * accelRate * Time.fixedDeltaTime;
 
         _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x + movement, _rigidbody.linearVelocity.y);
+
+        if (IsMoving && _isGrounded)
+            HandleStepClimb();
 
         // Fisika Gravitasi Lompat Responsif
         if (_rigidbody.linearVelocity.y < 0)
@@ -83,7 +83,7 @@ public class PlatformerMovement : MonoBehaviour
     private void HandleStepClimb()
     {
         float direction = Mathf.Sign(_playerInput.InputX);
-        Vector2 originLower = new Vector2(transform.position.x, _groundCheckPoint.position.y + 0.5f);
+        Vector2 originLower = new Vector2(transform.position.x, _groundCheckPoint.position.y + 0.1f);
         Vector2 originUpper = new Vector2(transform.position.x, _groundCheckPoint.position.y + _stepHeight);
 
         // Tembak laser bawah dan laser atas ke arah jalan
@@ -91,7 +91,10 @@ public class PlatformerMovement : MonoBehaviour
         RaycastHit2D hitUpper = Physics2D.Raycast(originUpper, Vector2.right * direction, _stepSearchDist, _groundLayer);
 
         if (hitLower.collider != null && hitUpper.collider == null)
-            _rigidbody.position += new Vector2(0f, _stepSmooth);
+        {
+            _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, 3.5f);
+        //    _rigidbody.position += new Vector2(0f, _stepHeight * 0.25f);
+        }
     }
 
     private void OnDrawGizmosSelected()
@@ -100,12 +103,14 @@ public class PlatformerMovement : MonoBehaviour
         {
             Gizmos.color = _isGrounded ? Color.green : Color.red;
             Gizmos.DrawWireSphere(_groundCheckPoint.position, _groundCheckRadius);
-        }
 
             Gizmos.color = Color.cyan;
+            float dir = transform.localScale.x >= 0 ? 1f : -1f;
             Vector3 originLower = new Vector3(transform.position.x, _groundCheckPoint.position.y + 0.05f, 0f);
             Vector3 originUpper = new Vector3(transform.position.x, _groundCheckPoint.position.y + _stepHeight, 0f);
-            Gizmos.DrawLine(originLower, originLower + Vector3.right * _stepSearchDist);
-            Gizmos.DrawLine(originUpper, originUpper + Vector3.right * _stepSearchDist);
+            
+            Gizmos.DrawLine(originLower, originLower + Vector3.right * dir * _stepSearchDist);
+            Gizmos.DrawLine(originUpper, originUpper + Vector3.right * dir * _stepSearchDist);
+        }
     }
 }
