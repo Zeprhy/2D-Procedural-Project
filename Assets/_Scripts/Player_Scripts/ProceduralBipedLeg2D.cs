@@ -1,6 +1,5 @@
 using UnityEngine;
 using System.Collections;
-using System;
 
 public class ProceduralBipedLeg2D : MonoBehaviour
 {
@@ -11,22 +10,23 @@ public class ProceduralBipedLeg2D : MonoBehaviour
     public PlatformerMovement movement;
     [SerializeField] private Transform gfxTransform;
 
-
     [Header("Pengaturan Langkah")]
-    public float stepDistance = 0.35f;   // Jarak minimal sebelum kaki melangkah
-    public float stepHeight = 0.25f;     // Tinggi angkatan kaki saat melangkah
-    public float stepSpeed = 12f;       // Kecepatan ayunan kaki
-    public float stepOvershoot = 0.45f;  // Seberapa jauh kaki mendahului ke depan saat melangkah
+    public float stepDistance = 0.5f;
+    public float stepHeight = 0.2f;
+    public float stepSpeed = 10f;
     public float footYOffset = 0.05f;
+    public float maxSlopeAngle = 45f;
 
     public bool isMyTurn = true;
     public bool IsStepping { get; private set; } = false;
 
     private Quaternion _targetRotation = Quaternion.identity;
-    void Update()
-    {
-        if (footHome == null || movement == null || gfxTransform == null) return;
 
+    private void Update()
+    {
+        if (footHome == null || movement == null) return;
+
+        // 1. Kondisi di udara (Lompat / Jatuh)
         if (!movement.IsGrounded)
         {
             StopAllCoroutines();
@@ -36,30 +36,34 @@ public class ProceduralBipedLeg2D : MonoBehaviour
             return;
         }
 
+        // 2. Kondisi diam (Idle): kunci kaki ke tanah tepat di bawah footHome
         if (!movement.IsMoving && !IsStepping)
-        {   
+        {
             SnapFootToGroundIdle();
             return;
         }
 
         transform.rotation = Quaternion.Slerp(transform.rotation, _targetRotation, Time.deltaTime * 15f);
+
+        // 3. Pengecekan giliran melangkah
         if (IsStepping || !isMyTurn || (otherLeg != null && otherLeg.IsStepping)) return;
 
-        float modeDir = Input.GetAxisRaw("Horizontal");
+        float moveDir = Input.GetAxisRaw("Horizontal");
         float distToHome = Vector2.Distance(transform.position, footHome.position);
+
         if (distToHome > stepDistance)
         {
-            StartCoroutine(PerformStep(Mathf.Sign(modeDir)));
-        }        
+            StartCoroutine(PerformStep(Mathf.Sign(moveDir)));
+        }
     }
 
     private void SnapFootToGroundIdle()
     {
-        RaycastHit2D hit = Physics2D.Raycast(footHome.position + Vector3.up * 0.5f, Vector2.down, 2f, groundLayer);
+        RaycastHit2D hit = Physics2D.Raycast(footHome.position + Vector3.up * 0.5f, Vector2.down, 2.5f, groundLayer);
         if (hit.collider != null)
         {
             float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
-            if (slopeAngle <= 45f)
+            if (slopeAngle <= maxSlopeAngle)
             {
                 Vector3 target = new Vector3(hit.point.x, hit.point.y + footYOffset, transform.position.z);
                 transform.position = Vector3.Lerp(transform.position, target, Time.deltaTime * 15f);
@@ -68,18 +72,19 @@ public class ProceduralBipedLeg2D : MonoBehaviour
         }
     }
 
-    IEnumerator PerformStep(float moveDir)
+    private IEnumerator PerformStep(float moveDir)
     {
         IsStepping = true;
-        Vector3 startPos = transform.position; 
+        Vector3 startPos = transform.position;
 
+        // Dinamis: langkah melebar sedikit sesuai kecepatan badan
         float currentSpeed = Mathf.Abs(movement.PlayerRigidbody.linearVelocity.x);
-        float dynamicDistance = stepDistance + (currentSpeed * 0.05f);
+        float dynamicDistance = stepDistance + (currentSpeed * 0.04f);
 
+        // Kaki ayun mendarat mendahului kaki tumpuan (stance leg)
         float stanceX = otherLeg != null ? otherLeg.transform.position.x : footHome.position.x;
         float targetX = stanceX + (moveDir * dynamicDistance);
 
-        // Tembak laser dari atas ke bawah untuk mencari permukaan anak tangga / lereng
         Vector2 rayOrigin = new Vector2(targetX, footHome.position.y + 1.5f);
         RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, 4f, groundLayer);
 
@@ -87,7 +92,8 @@ public class ProceduralBipedLeg2D : MonoBehaviour
         if (hit.collider != null)
         {
             float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
-            if (slopeAngle <= 45f)
+            // Tolak permukaan yang terlalu curam / tebing samping
+            if (slopeAngle <= maxSlopeAngle)
             {
                 targetPos = new Vector3(hit.point.x, hit.point.y + footYOffset, transform.position.z);
                 AlignWithNormal(hit.normal);
@@ -124,11 +130,11 @@ public class ProceduralBipedLeg2D : MonoBehaviour
         if (normal.y <= 0.4f) return;
 
         float angle = Mathf.Atan2(normal.y, normal.x) * Mathf.Rad2Deg - 90f;
-        angle = Mathf.Clamp(angle, -45f, 45f);
+        angle = Mathf.Clamp(angle, -maxSlopeAngle, maxSlopeAngle);
         _targetRotation = Quaternion.Euler(0, 0, angle);
     }
 
-    void OnDrawGizmos()
+    private void OnDrawGizmos()
     {
         if (footHome != null)
         {

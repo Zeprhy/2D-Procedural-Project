@@ -1,16 +1,23 @@
 using UnityEngine;
+
 public class FlipToMousePos : MonoBehaviour
 {
     private Camera _main;
-    private bool _lookingRight;
+    private bool _lookingRight = true;
     public bool LookingOnRight => _lookingRight;
-    void Start()
+
+    private void Start()
     {
-        _main = FindObjectOfType<Camera>();
+        _main = Camera.main;
     }
+
     private void Update()
     {
-        if (_main == null) return;
+        if (_main == null)
+        {
+            _main = Camera.main;
+            return;
+        }
 
         float mouseScreenX = Input.mousePosition.x;
         float charScreenX = _main.WorldToScreenPoint(transform.position).x;
@@ -22,7 +29,6 @@ public class FlipToMousePos : MonoBehaviour
         }
         else
         {
-            // Menghadap ke Kanan
             transform.localScale = new Vector3(1f, 1f, 1f);
             _lookingRight = true;
         }

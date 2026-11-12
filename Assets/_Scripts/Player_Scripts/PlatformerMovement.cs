@@ -8,28 +8,25 @@ public class PlatformerMovement : MonoBehaviour
     [SerializeField] private Rigidbody2D _rigidbody;
 
     [Header("Pergerakan Horizontal")]
-    [SerializeField] private float _speed = 7f;
+    [SerializeField] private float _speed = 6f;
     [SerializeField] private float _acceleration = 40f;
     [SerializeField] private float _deceleration = 30f;
 
-    [Header("Lompatan & Gravitasi (Responsive Jump)")]
-    [SerializeField] private float _jumpForce = 14f;
-    [SerializeField] private float _fallMultiplier = 3f;  
-    [SerializeField] private float _lowJumpMultiplier = 2f; 
+    [Header("Lompatan & Gravitasi")]
+    [SerializeField] private float _jumpForce = 12f;
+    [SerializeField] private float _fallMultiplier = 3f;
+    [SerializeField] private float _lowJumpMultiplier = 2f;
 
     [Header("Deteksi Lantai (Ground Check)")]
     [SerializeField] private Transform _groundCheckPoint;
     [SerializeField] private float _groundCheckRadius = 0.2f;
     [SerializeField] private LayerMask _groundLayer;
 
-    [Header ("System Panjat Tangga 2D Step Up")]
-    [SerializeField] private float _stepHeight = 0.3f;       
-    [SerializeField] private float _stepSearchDist = 0.4f; 
-    [SerializeField] private float _stepSmooth = 0.15f;   
+    [Header("Sistem Panjat Tangga 2D")]
+    [SerializeField] private float _stepHeight = 0.5f;
+    [SerializeField] private float _stepSearchDist = 0.45f;
     [SerializeField] private float _maxSlopeAngle = 45f;
 
-
-    // Properti publik (dibaca oleh Player_Animator & Foot IK)
     public Rigidbody2D PlayerRigidbody { get => _rigidbody; set => _rigidbody = value; }
     public float Speed { get => _speed; set => _speed = value; }
     public bool Freeze { get; set; }
@@ -60,8 +57,8 @@ public class PlatformerMovement : MonoBehaviour
     {
         if (Freeze) return;
 
-        // Gerak Horizontal di Sumbu X (Platformer murni)
-        float speedMultiplier = _isClimbing ? 0.6f : 1.0f; 
+        // Karakter melambat 40% saat mendaki tangga agar gerakannya tenang/santai
+        float speedMultiplier = _isClimbing ? 0.6f : 1.0f;
         float targetSpeed = _playerInput.InputX * (_speed * speedMultiplier);
 
         float speedDiff = targetSpeed - _rigidbody.linearVelocity.x;
@@ -72,8 +69,10 @@ public class PlatformerMovement : MonoBehaviour
 
         if (IsMoving && _isGrounded)
             HandleStepClimb();
+        else
+            _isClimbing = false;
 
-        // Fisika Gravitasi Lompat Responsif
+        // Gravitasi Lompat Responsif
         if (_rigidbody.linearVelocity.y < 0)
         {
             _rigidbody.linearVelocity += Vector2.up * (Physics2D.gravity.y * (_fallMultiplier - 1) * Time.fixedDeltaTime);
@@ -90,19 +89,19 @@ public class PlatformerMovement : MonoBehaviour
         Vector2 originLower = new Vector2(transform.position.x + (direction * 0.1f), _groundCheckPoint.position.y + 0.08f);
         Vector2 originUpper = new Vector2(transform.position.x + (direction * 0.1f), _groundCheckPoint.position.y + _stepHeight);
 
-        // Tembak laser bawah dan laser atas ke arah jalan
         RaycastHit2D hitLower = Physics2D.Raycast(originLower, Vector2.right * direction, _stepSearchDist, _groundLayer);
         RaycastHit2D hitUpper = Physics2D.Raycast(originUpper, Vector2.right * direction, _stepSearchDist, _groundLayer);
 
         if (hitLower.collider != null && hitUpper.collider == null)
-        {   
+        {
+            // Tolak lereng yang terlalu curam (bukan anak tangga)
             float surfaceAngle = Vector2.Angle(hitLower.normal, Vector2.up);
-
             if (surfaceAngle > _maxSlopeAngle && surfaceAngle < 85f)
             {
                 _isClimbing = false;
                 return;
             }
+
             _isClimbing = true;
             _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, 2.0f);
         }
@@ -121,9 +120,9 @@ public class PlatformerMovement : MonoBehaviour
 
             Gizmos.color = Color.cyan;
             float dir = transform.localScale.x >= 0 ? 1f : -1f;
-            Vector3 originLower = new Vector3(transform.position.x, _groundCheckPoint.position.y + 0.05f, 0f);
-            Vector3 originUpper = new Vector3(transform.position.x, _groundCheckPoint.position.y + _stepHeight, 0f);
-            
+            Vector3 originLower = new Vector3(transform.position.x + (dir * 0.1f), _groundCheckPoint.position.y + 0.08f, 0f);
+            Vector3 originUpper = new Vector3(transform.position.x + (dir * 0.1f), _groundCheckPoint.position.y + _stepHeight, 0f);
+
             Gizmos.DrawLine(originLower, originLower + Vector3.right * dir * _stepSearchDist);
             Gizmos.DrawLine(originUpper, originUpper + Vector3.right * dir * _stepSearchDist);
         }
