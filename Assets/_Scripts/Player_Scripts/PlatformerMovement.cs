@@ -22,6 +22,12 @@ public class PlatformerMovement : MonoBehaviour
     [SerializeField] private float _groundCheckRadius = 0.2f;
     [SerializeField] private LayerMask _groundLayer;
 
+    [Header ("System Panjat Tangga 2D Step Up")]
+    [SerializeField] private float _stepHeight = 0.3f;        // Tinggi maksimal anak tangga yang bisa dipanjat
+    [SerializeField] private float _stepSearchDist = 0.4f;    // Jarak jangkauan rabaan ke depan
+    [SerializeField] private float _stepSmooth = 0.15f;       // Kecepatan dorongan naik ke tangga
+
+
     // Properti publik (dibaca oleh Player_Animator & Foot IK)
     public Rigidbody2D PlayerRigidbody { get => _rigidbody; set => _rigidbody = value; }
     public float Speed { get => _speed; set => _speed = value; }
@@ -46,6 +52,9 @@ public class PlatformerMovement : MonoBehaviour
 
         if (Input.GetButtonDown("Jump") && _isGrounded)
             _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, _jumpForce);
+
+        if (IsMoving && _isGrounded)
+            HandleStepClimb();
     }
 
     private void FixedUpdate()
@@ -71,6 +80,20 @@ public class PlatformerMovement : MonoBehaviour
         }
     }
 
+    private void HandleStepClimb()
+    {
+        float direction = Mathf.Sign(_playerInput.InputX);
+        Vector2 originLower = new Vector2(transform.position.x, _groundCheckPoint.position.y + 0.5f);
+        Vector2 originUpper = new Vector2(transform.position.x, _groundCheckPoint.position.y + _stepHeight);
+
+        // Tembak laser bawah dan laser atas ke arah jalan
+        RaycastHit2D hitLower = Physics2D.Raycast(originLower, Vector2.right * direction, _stepSearchDist, _groundLayer);
+        RaycastHit2D hitUpper = Physics2D.Raycast(originUpper, Vector2.right * direction, _stepSearchDist, _groundLayer);
+
+        if (hitLower.collider != null && hitUpper.collider == null)
+            _rigidbody.position += new Vector2(0f, _stepSmooth);
+    }
+
     private void OnDrawGizmosSelected()
     {
         if (_groundCheckPoint != null)
@@ -78,5 +101,11 @@ public class PlatformerMovement : MonoBehaviour
             Gizmos.color = _isGrounded ? Color.green : Color.red;
             Gizmos.DrawWireSphere(_groundCheckPoint.position, _groundCheckRadius);
         }
+
+            Gizmos.color = Color.cyan;
+            Vector3 originLower = new Vector3(transform.position.x, _groundCheckPoint.position.y + 0.05f, 0f);
+            Vector3 originUpper = new Vector3(transform.position.x, _groundCheckPoint.position.y + _stepHeight, 0f);
+            Gizmos.DrawLine(originLower, originLower + Vector3.right * _stepSearchDist);
+            Gizmos.DrawLine(originUpper, originUpper + Vector3.right * _stepSearchDist);
     }
 }
