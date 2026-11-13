@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System;
 
 public class ProceduralBipedLeg2D : MonoBehaviour
 {
@@ -77,9 +78,8 @@ public class ProceduralBipedLeg2D : MonoBehaviour
         IsStepping = true;
         Vector3 startPos = transform.position;
 
-        // Dinamis: langkah melebar sedikit sesuai kecepatan badan
         float currentSpeed = Mathf.Abs(movement.PlayerRigidbody.linearVelocity.x);
-        float dynamicDistance = stepDistance + (currentSpeed * 0.04f);
+        float dynamicDistance = stepDistance + (currentSpeed * 0.03f);
 
         // Kaki ayun mendarat mendahului kaki tumpuan (stance leg)
         float stanceX = otherLeg != null ? otherLeg.transform.position.x : footHome.position.x;
@@ -106,10 +106,10 @@ public class ProceduralBipedLeg2D : MonoBehaviour
             if (!movement.IsGrounded) break;
 
             t += Time.deltaTime * stepSpeed;
-            float smoothT = Mathf.SmoothStep(0f, 1f, t);
-
+             float smoothT = Mathf.SmoothStep(0f, 1f, t);
             Vector3 currentPos = Vector3.Lerp(startPos, targetPos, smoothT);
-            currentPos.y += Mathf.Sin(smoothT * Mathf.PI) * stepHeight;
+
+            currentPos.y += Mathf.Sin(t * MathF.PI) * stepHeight;
 
             transform.position = currentPos;
             yield return null;

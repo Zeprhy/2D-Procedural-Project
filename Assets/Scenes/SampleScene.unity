@@ -4349,7 +4349,7 @@ MonoBehaviour:
   gfxTransform: {fileID: 7469781702054462226}
   stepDistance: 0.55
   stepHeight: 0.18
-  stepSpeed: 10
+  stepSpeed: 7
   footYOffset: 0.05
   maxSlopeAngle: 45
   isMyTurn: 0
@@ -4521,7 +4521,7 @@ MonoBehaviour:
   gfxTransform: {fileID: 7469781702054462226}
   stepDistance: 0.55
   stepHeight: 0.18
-  stepSpeed: 10
+  stepSpeed: 7
   footYOffset: 0.05
   maxSlopeAngle: 45
   isMyTurn: 1
