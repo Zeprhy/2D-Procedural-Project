@@ -3,34 +3,36 @@ using UnityEngine;
 public class DynamicArmWeaponController2D : MonoBehaviour
 {
     [Header("Referensi Tubuh")]
-    [SerializeField] private Transform _shoulderPivot;      // B_Body_Middle (pangkal bahu)
-    [SerializeField] private Transform _gfxTransform;       // Objek GFX (yang di-flip sumbu X)
+    [SerializeField] private Transform _shoulderPivot;      // Masukkan: B_R_Hand_Main (bahu kanan)
+    [SerializeField] private Transform _gfxTransform;       // Masukkan: GFX
     [SerializeField] private Rigidbody2D _playerRb;
 
     [Header("Target IK Tangan")]
-    [SerializeField] private Transform _rHandTarget;        // R_Hand_Target
-    [SerializeField] private Transform _lHandTarget;        // L_Hand_Target
-    [SerializeField] private Transform _lHandGripPoint;     // Grip_Point_L (di gagang kapak)
+    [SerializeField] private Transform _rHandTarget;        // Masukkan: R_Hand_Target
+    [SerializeField] private Transform _lHandTarget;        // Masukkan: L_Hand_Target
+    [SerializeField] private Transform _lHandGripPoint;     // Masukkan: Grip_Point_L (di gagang kapak)
 
     [Header("Tulang Telapak Tangan")]
-    [SerializeField] private Transform _rHandBone;          // B_R_Hand
-    [SerializeField] private Transform _lHandBone;          // B_L_Hand
-    [SerializeField] private float _handAngleOffset = 0f;
+    [SerializeField] private Transform _rHandBone;          // Masukkan: B_R_Hand
+    [SerializeField] private Transform _lHandBone;          // Masukkan: B_L_Hand
+    [SerializeField] private float _handAngleOffset = 0f;   // Geser slider ini untuk meluruskan pegangan
 
     [Header("Jangkauan Lengan (Dynamic Reach)")]
-    [SerializeField] private float _minReach = 0.25f;       // Jarak saat mouse dekat (siku menekuk ke dada)
-    [SerializeField] private float _maxReach = 0.65f;       // Jarak maksimal saat lengan menjulur lurus
-    [SerializeField] private float _minAimAngle = -60f;     // Batas bidik ke bawah
-    [SerializeField] private float _maxAimAngle = 80f;      // Batas bidik ke atas
+    [SerializeField] private float _minReach = 0.25f;       // Jarak saat mouse dekat (siku menekuk persis video keduamu)
+    [SerializeField] private float _maxReach = 0.48f;       // Jarak maksimal lengan menjulur
+    [SerializeField] private float _minAimAngle = -50f;     // Batas bidik ke bawah
+    [SerializeField] private float _maxAimAngle = 65f;      // Batas bidik ke atas
 
-    [Header("Inersia & Sway Tangan")]
-    [SerializeField] private float _aimLagTime = 0.12f;      // Jeda berat saat tangan mengayun mengikuti mouse
-    [SerializeField] private float _walkBobAmount = 0.08f;   // Goyangan tangan naik-turun saat lari
-    [SerializeField] private float _walkBobSpeed = 9f;
+    [Header("Inersia & Sway")]
+    [SerializeField] private float _aimLagTime = 0.15f;      // Kelembutan ayunan kapak berat
+    [SerializeField] private float _walkBobAmount = 0.05f;
+    [SerializeField] private float _walkBobSpeed = 8f;
 
     private Camera _cam;
     private Vector3 _currentHandTargetPos;
     private Vector3 _handVelocity;
+    private float _currentAimAngle;
+    private float _angleVelocity;
     private float _bobTimer;
 
     private void Start()
@@ -41,47 +43,59 @@ public class DynamicArmWeaponController2D : MonoBehaviour
 
     private void LateUpdate()
     {
-    if (_cam == null || _shoulderPivot == null || _rHandTarget == null) return;
+        if (_cam == null || _shoulderPivot == null || _rHandTarget == null) return;
 
+        // 1. Arah Hadap Karakter
         float facingDir = _gfxTransform != null ? Mathf.Sign(_gfxTransform.localScale.x) : 1f;
 
+        // 2. Baca Posisi Mouse & Hitung Jarak
         Vector3 mouseWorldPos = _cam.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPos.z = 0;
         Vector2 toMouse = mouseWorldPos - _shoulderPivot.position;
 
-        float distanceToMouse = toMouse.magnitude;
-        float currentReach = Mathf.Clamp(distanceToMouse, _minReach, _maxReach);
+        // Dynamic Reach: makin dekat mouse, makin dekat target ke bahu (siku menekuk)
+        float distance = toMouse.magnitude;
+        float currentReach = Mathf.Clamp(distance, _minReach, _maxReach);
 
-        //Hitung sudut bidik dan batasi agar tidak memutar ke belakang punggung
+        // 3. Sudut Bidik
         float rawAngle = Mathf.Atan2(toMouse.y, toMouse.x * facingDir) * Mathf.Rad2Deg;
         float clampedAngle = Mathf.Clamp(rawAngle, _minAimAngle, _maxAimAngle);
-        float rad = clampedAngle * Mathf.Rad2Deg;
 
-        //Tentukan posisi ideal tangan kanan di depan bahu
+        // 4. Inersia Sudut (Sway Berat Senjata)
+        _currentAimAngle = Mathf.SmoothDampAngle(_currentAimAngle, clampedAngle, ref _angleVelocity, _aimLagTime);
+        float rad = _currentAimAngle * Mathf.Deg2Rad;
+
+        // 5. Hitung Posisi Target Tangan Kanan di Depan Bahu
         Vector3 targetOffset = new Vector3(Mathf.Cos(rad) * currentReach * facingDir, Mathf.Sin(rad) * currentReach, 0f);
         Vector3 desiredHandPos = _shoulderPivot.position + targetOffset;
 
-        //Tambahkan Sway & Bobbing saat berjalan/lari
+        // Bobbing saat jalan
         float hSpeed = _playerRb != null ? _playerRb.linearVelocity.x : 0f;
         if (Mathf.Abs(hSpeed) > 0.1f)
         {
             _bobTimer += Time.deltaTime * _walkBobSpeed;
             float bobY = Mathf.Sin(_bobTimer) * _walkBobAmount;
-            float dragX = -Mathf.Sign(hSpeed) * 0.05f; // Tangan sedikit tertarik ke belakang saat lari
-            desiredHandPos += new Vector3(dragX, bobY, 0f);
+            desiredHandPos += new Vector3(0f, bobY, 0f);
         }
 
-        _currentHandTargetPos = Vector3.SmoothDamp(_currentHandTargetPos, desiredHandPos, ref _handVelocity, _aimLagTime);
+        // Terapkan Posisi ke R_Hand_Target
+        _currentHandTargetPos = Vector3.SmoothDamp(_currentHandTargetPos, desiredHandPos, ref _handVelocity, 0.05f);
         _rHandTarget.position = _currentHandTargetPos;
 
-        float worldAimAngle = clampedAngle * facingDir;
-        Quaternion targetHandRotation = Quaternion.Euler(0f, 0f, worldAimAngle + (facingDir * _handAngleOffset));
+        // 6. Putar Telapak Tangan Kanan (Kapak ikut berputar karena kapak ada di dalam B_R_Hand)
+        float worldAimAngle = _currentAimAngle * facingDir;
+        Quaternion gripRotation = Quaternion.Euler(0f, 0f, worldAimAngle + (facingDir * _handAngleOffset));
+        
         if (_rHandBone != null)
-            _rHandBone.rotation = targetHandRotation;
+            _rHandBone.rotation = gripRotation;
 
-        if (_rHandTarget != null & _lHandGripPoint != null)
-            _lHandGripPoint.position = _lHandGripPoint.position;
+        // 7. [KUNCI VIDEO 2]: Kunci Target Tangan Kiri persis di Grip Bawah Gagang
+        if (_lHandTarget != null && _lHandGripPoint != null)
+        {
+            _lHandTarget.position = _lHandGripPoint.position;
+            
             if (_lHandBone != null)
-                 _lHandBone.rotation = targetHandRotation;
+                _lHandBone.rotation = gripRotation;
+        }
     }
 }
