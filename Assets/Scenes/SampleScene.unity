@@ -1903,9 +1903,9 @@ MonoBehaviour:
   _rHandTarget: {fileID: 7469781702848666608}
   _rHandBone: {fileID: 7469781702684168655}
   _handAngleOffset: -60
-  _leftShoulderPivot: {fileID: 0}
+  _leftShoulderPivot: {fileID: 7469781703220577739}
   _lHandTarget: {fileID: 7469781703044582525}
-  _lHandIdleOffset: {x: 0.5, y: -1}
+  _lHandIdleOffset: {x: 0.2, y: -0.9}
   _minReach: 0.18
   _maxReach: 0.6
   _minAimAngle: -50

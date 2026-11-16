@@ -11,6 +11,7 @@ public class OneHandWeaponController2D : MonoBehaviour
     [SerializeField] private Transform _rHandTarget;     
     [SerializeField] private Transform _rHandBone;        
     [SerializeField] private float _handAngleOffset = -15f;
+    
     [Header("Tangan Kiri (Pose Penyeimbang / Santai)")]
     [SerializeField] private Transform _leftShoulderPivot;
     [SerializeField] private Transform _lHandTarget;
