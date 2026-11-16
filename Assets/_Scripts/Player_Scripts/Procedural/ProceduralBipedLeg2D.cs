@@ -22,7 +22,6 @@ public class ProceduralBipedLeg2D : MonoBehaviour
     public bool IsStepping { get; private set; } = false;
 
     private Quaternion _targetRotation = Quaternion.identity;
-    private float _stuckTimer = 0f;
 
     private void Update()
     {
