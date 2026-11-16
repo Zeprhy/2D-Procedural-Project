@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class FlipToMousePos : MonoBehaviour
 {
+    [SerializeField] private float _flipDeadzone = 0.35f;
+
     private Camera _main;
     private bool _lookingRight = true;
     public bool LookingOnRight => _lookingRight;
@@ -19,10 +21,10 @@ public class FlipToMousePos : MonoBehaviour
             return;
         }
 
-        float mouseScreenX = Input.mousePosition.x;
-        float charScreenX = _main.WorldToScreenPoint(transform.position).x;
+        Vector3 mouseWorldPos = _main.ScreenToWorldPoint(Input.mousePosition);
+        float diffX = mouseWorldPos.x - transform.position.x;
 
-        if (mouseScreenX < charScreenX)
+        if (diffX < -_flipDeadzone)
         {
             transform.localScale = new Vector3(-1f, 1f, 1f);
             _lookingRight = false;
