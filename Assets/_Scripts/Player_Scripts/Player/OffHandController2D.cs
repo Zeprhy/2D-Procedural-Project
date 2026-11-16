@@ -56,7 +56,7 @@ public class OffHandController2D : MonoBehaviour
             );
 
             _currentAimAngle = ProceduralArmMath.UpdateAimAngle(
-                toMouse, facingDir, _minReach, _maxReach, 0.08f, ref _angleVelocity, _currentAimAngle
+                toMouse, facingDir, _minAimAngle, _maxAimAngle, 0.08f, ref _angleVelocity, _currentAimAngle
             );
 
             float rad = _currentAimAngle * Mathf.Deg2Rad;

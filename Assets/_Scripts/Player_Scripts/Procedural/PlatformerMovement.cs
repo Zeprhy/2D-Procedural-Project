@@ -86,8 +86,8 @@ public class PlatformerMovement : MonoBehaviour
     private void HandleStepClimb()
     {
         float direction = Mathf.Sign(_playerInput.InputX);
-        Vector2 originLower = new Vector2(transform.position.x + (direction * 0.1f), _groundCheckPoint.position.y + 0.08f);
-        Vector2 originUpper = new Vector2(transform.position.x + (direction * 0.1f), _groundCheckPoint.position.y + _stepHeight);
+        Vector2 originLower = new Vector2(transform.position.x + (direction * 0.15f), _groundCheckPoint.position.y + 0.08f);
+        Vector2 originUpper = new Vector2(transform.position.x + (direction * 0.15f), _groundCheckPoint.position.y + _stepHeight);
 
         RaycastHit2D hitLower = Physics2D.Raycast(originLower, Vector2.right * direction, _stepSearchDist, _groundLayer);
         RaycastHit2D hitUpper = Physics2D.Raycast(originUpper, Vector2.right * direction, _stepSearchDist, _groundLayer);
@@ -103,7 +103,8 @@ public class PlatformerMovement : MonoBehaviour
             }
 
             _isClimbing = true;
-            _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, 2.0f);
+            _rigidbody.position += new Vector2(0f, 0.04f);
+            _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, 2.5f);
         }
         else
         {

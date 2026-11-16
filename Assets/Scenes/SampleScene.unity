@@ -310,8 +310,8 @@ MonoBehaviour:
   _idleOffset: {x: 0.2, y: -1}
   _minReach: 0.6
   _maxReach: 1
-  _minAimAngle: -60
-  _maxAimAngle: 30
+  _minAimAngle: -45
+  _maxAimAngle: 90
   _springStiffness: 140
   _springDamping: 14
 --- !u!1 &235276749
@@ -1909,12 +1909,12 @@ MonoBehaviour:
   _fallMultiplier: 3
   _lowJumpMultiplier: 2
   _groundCheckPoint: {fileID: 235276750}
-  _groundCheckRadius: 0.2
+  _groundCheckRadius: 0.4
   _groundLayer:
     serializedVersion: 2
     m_Bits: 1024
-  _stepHeight: 0.6
-  _stepSearchDist: 0.5
+  _stepHeight: 0.55
+  _stepSearchDist: 0.4
   _maxSlopeAngle: 45
 --- !u!1 &7469781701559126101
 GameObject:
@@ -1986,7 +1986,7 @@ CapsuleCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: 0.05}
+  m_Offset: {x: 0.08, y: 0.05}
   m_Size: {x: 0.6, y: 2.5}
   m_Direction: 0
 --- !u!4 &7469781701598909632
@@ -2788,7 +2788,6 @@ GameObject:
   - component: {fileID: 7469781702054462226}
   - component: {fileID: 7469781702054462229}
   - component: {fileID: 7469781702054462228}
-  - component: {fileID: 7469781702054462231}
   - component: {fileID: 7469781702054462230}
   m_Layer: 0
   m_Name: GFX
@@ -2851,28 +2850,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _flipDeadzone: 0.35
---- !u!95 &7469781702054462231
-Animator:
-  serializedVersion: 7
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7469781702054462227}
-  m_Enabled: 0
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 3ded6c40dd5b090449f63ab2360b7821, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &7469781702080639062
 GameObject:
   m_ObjectHideFlags: 0
@@ -4333,10 +4310,10 @@ MonoBehaviour:
     m_Bits: 1024
   movement: {fileID: 7469781701559126100}
   gfxTransform: {fileID: 7469781702054462226}
-  stepDistance: 0.55
-  stepHeight: 0.18
+  stepDistance: 0.5
+  stepHeight: 0.1
   stepSpeed: 7
-  footYOffset: 0.05
+  footYOffset: 0.2
   maxSlopeAngle: 45
   isMyTurn: 0
 --- !u!114 &7469781702881834768
@@ -4504,10 +4481,10 @@ MonoBehaviour:
     m_Bits: 1024
   movement: {fileID: 7469781701559126100}
   gfxTransform: {fileID: 7469781702054462226}
-  stepDistance: 0.55
-  stepHeight: 0.18
+  stepDistance: 0.5
+  stepHeight: 0.1
   stepSpeed: 7
-  footYOffset: 0.05
+  footYOffset: 0.2
   maxSlopeAngle: 45
   isMyTurn: 1
 --- !u!4 &7469781702973571908

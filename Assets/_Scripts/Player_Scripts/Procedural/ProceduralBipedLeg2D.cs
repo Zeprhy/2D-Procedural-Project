@@ -22,22 +22,23 @@ public class ProceduralBipedLeg2D : MonoBehaviour
     public bool IsStepping { get; private set; } = false;
 
     private Quaternion _targetRotation = Quaternion.identity;
+    private float _stuckTimer = 0f;
 
     private void Update()
     {
         if (footHome == null || movement == null) return;
 
-        // 1. Kondisi di udara (Lompat / Jatuh)
-        if (!movement.IsGrounded)
+        // Kondisi di udara (Lompat / Jatuh)
+       if (!movement.IsGrounded)
         {
             StopAllCoroutines();
             IsStepping = false;
-            transform.position = Vector3.Lerp(transform.position, footHome.position, Time.deltaTime * 12f);
-            transform.rotation = Quaternion.Slerp(transform.rotation, footHome.rotation, Time.deltaTime * 12f);
+            transform.position = Vector3.Lerp(transform.position, footHome.position, Time.deltaTime * 15f);
+            transform.rotation = Quaternion.Slerp(transform.rotation, footHome.rotation, Time.deltaTime * 15f);
             return;
         }
 
-        // 2. Kondisi diam (Idle): kunci kaki ke tanah tepat di bawah footHome
+        // Kondisi diam (Idle): kunci kaki ke tanah tepat di bawah footHome
         if (!movement.IsMoving && !IsStepping)
         {
             SnapFootToGroundIdle();
@@ -45,8 +46,6 @@ public class ProceduralBipedLeg2D : MonoBehaviour
         }
 
         transform.rotation = Quaternion.Slerp(transform.rotation, _targetRotation, Time.deltaTime * 15f);
-
-        // 3. Pengecekan giliran melangkah
         if (IsStepping || !isMyTurn || (otherLeg != null && otherLeg.IsStepping)) return;
 
         float moveDir = Input.GetAxisRaw("Horizontal");
