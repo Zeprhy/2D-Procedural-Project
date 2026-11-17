@@ -14,6 +14,9 @@ public class OneHandWeaponController2D : MonoBehaviour
     [SerializeField] private Transform _rHandBone;
     [SerializeField] private float _handAngleOffset = -20f;
 
+    [Header("Senjata yang Sedang Dipegang")]
+    [SerializeField] private WeaponLogic _equippedWeapon;
+
     [Header("Pose Santai Pedang (Saat Klik Kiri Dilepas)")]
     [SerializeField] private Vector2 _swordRestOffset = new Vector2(0.12f, -0.35f); // Posisi pedang di samping paha
     [SerializeField] private float _swordRestAngle = -65f; // Sudut pedang menunjuk ke bawah
@@ -52,6 +55,9 @@ public class OneHandWeaponController2D : MonoBehaviour
 
         if (_aimTracker.IsAimingRight)
         {
+            if (_equippedWeapon != null)
+                _equippedWeapon.TriggerAttack(gameObject);
+
             Vector2 toMouse = _aimTracker.MouseWorldPosition - _rightShoulderPivot.position;
             float distanceToMouse = toMouse.magnitude;
 

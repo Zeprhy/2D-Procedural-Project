@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using _Scripts.Interface;
 
 [RequireComponent(typeof(PolygonCollider2D))]
 public class WeaponLogic : MonoBehaviour
@@ -50,24 +51,33 @@ public class WeaponLogic : MonoBehaviour
     }
 
     private void OnTriggerEnter2D(Collider2D target) => ProcessDamage(target);
-    private void OTriggerStay2D(Collider2D target) => ProcessDamage(target);
-    
+    private void OnTriggerStay2D(Collider2D target) => ProcessDamage(target);
 
     private void ProcessDamage(Collider2D target)
     {
-        if (target.gameObject == _currentOwner) return;
+        // Debug.Log($"[SENSOR PEDANG]: Menyentuh {target.name} | Layer Objek: {LayerMask.LayerToName(target.gameObject.layer)} | TargetLayer Inspector: {_targetLayer.value}");
 
-        if (((1 << target.gameObject.layer) & _targetLayer.value) != 0)
+        if (target.gameObject == _currentOwner) return;
+        
+        // Pengecekan Layer
+        if (((1 << target.gameObject.layer) & _targetLayer.value) == 0) 
         {
-            if (_hitTargetCooldown.TryGetValue(target, out float lastHitTime))
-            {
-                if (Time.time < lastHitTime + _damageInterval) return;
-            }
+            // Debug.Log("<color=yellow>[GAGAL]: Objek yang disentuh bukan layer target!</color>");
+            return;
+        }
+
+        if (_hitTargetCooldown.TryGetValue(target, out float lastHitTime))
+        {
+            if (Time.time < lastHitTime + _damageInterval) return;
         }
 
         _hitTargetCooldown[target] = Time.time;
 
         float damage = (_weaponData is MeleeWeaponSO melee) ? melee.Damage : 10f;
-        Debug.Log($"<color=red>[HIT LAYER]</color> {target.name} (Layer: {LayerMask.LayerToName(target.gameObject.layer)}) menerima {damage} Damage!");
+        // Debug.Log($"<color=red>[HIT LAYER]</color> {target.name} menerima {damage} Damage!");
+
+        IDamageable damageable = target.GetComponentInParent<IDamageable>();
+        if (damageable != null)
+            damageable.TakeDamage(damage);
     }
 }
