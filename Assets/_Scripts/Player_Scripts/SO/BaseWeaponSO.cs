@@ -1,4 +1,5 @@
 using System;
+using Unity.VisualScripting;
 using UnityEngine;
 
 [Serializable]
@@ -9,9 +10,13 @@ public abstract class BaseWeaponSO : ScriptableObject
     [SerializeField] private string _weaponName;
     [SerializeField] private Sprite _weaponIcon;
 
+    [Header ("Fisika Bobot Senjata")]
+    [SerializeField] private float _weight = 6f;
+
     public string WeaponID => _weaponID;
     public string WeaponName => _weaponName;
     public Sprite WeaponIcon => _weaponIcon;
+    public float Weight => _weight;
 
     // Do Something !!
     public abstract void Activate(GameObject owner, WeaponLogic weaponLogic);

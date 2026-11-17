@@ -20,6 +20,9 @@ public class WeaponLogic : MonoBehaviour
     [SerializeField] private float _hitStopDuration = 0.08f;
     [SerializeField] private float _criticalMultiplier = 2.0f;
 
+    [Header("Juicy Effect: Floating Damage Text")]
+    [SerializeField] private DamagePopUp2D _damageTextPrefab;
+
     private float _lastWeaponAngle;
     private float _currentAngularSpeed;
     private PolygonCollider2D _hitbox;
@@ -98,6 +101,17 @@ public class WeaponLogic : MonoBehaviour
         bool isCritical = Mathf.Abs(_currentAngularSpeed) > _criticalSwingThreshold;
         float baseDamage = (_weaponData is MeleeWeaponSO melee) ? melee.Damage : 10f;
         float finalDamage = isCritical ? (baseDamage * _criticalMultiplier) : baseDamage;
+
+        float weaponWeight = _weaponData != null ? _weaponData.Weight : 5f;
+        if (CameraFollow2D.Instance != null)
+            CameraFollow2D.Instance.TriggerHitImpact(weaponWeight, isCritical);
+
+        if (_damageTextPrefab != null)
+        {
+            Vector3 spawnPos = target.bounds.center + new Vector3(Random.Range(-0.2f, 0.2f), 0.5f, 0);
+            DamagePopUp2D popUp = Instantiate(_damageTextPrefab, spawnPos, Quaternion.identity);
+            popUp.Setup(finalDamage, isCritical);
+        }
 
         if (isCritical)
             StartCoroutine(HitStopRoutine(_hitStopDuration));

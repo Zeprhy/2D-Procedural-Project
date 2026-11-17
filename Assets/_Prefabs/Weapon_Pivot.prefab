@@ -245,10 +245,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponLogic
   _weaponData: {fileID: 11400000, guid: cc185da694878734285c42f29bdf9512, type: 2}
-  _damageInterval: 3
+  _damageInterval: 1
   _targetLayer:
     serializedVersion: 2
     m_Bits: 4096
   _criticalSwingThreshold: 250
   _hitStopDuration: 0.08
   _criticalMultiplier: 1.5
+  _damageTextPrefab: {fileID: 6164039436554372379, guid: 70aa6f87fc8f2794eab96c01cd910dbd, type: 3}
