@@ -975,9 +975,9 @@ MonoBehaviour:
   _swordRestAngle: -65
   _minReach: 0.45
   _maxReach: 1
-  _minAimAngle: -50
+  _minAimAngle: -70
   _maxAimAngle: 60
-  _mouseNearDist: 1
+  _mouseNearDist: 1.2
   _mouseFarDist: 2
   _springStiffness: 120
   _springDamping: 12
@@ -2930,7 +2930,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb4802fae21a24f4bb68014ee5c390dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _flipDeadzone: 0.35
+  _flipDeadzone: 1.4
 --- !u!1 &7469781702080639062
 GameObject:
   m_ObjectHideFlags: 0
