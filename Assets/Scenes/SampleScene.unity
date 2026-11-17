@@ -1696,6 +1696,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 7469781702684168655}
     m_Modifications:
+    - target: {fileID: 466529165042165860, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
+      propertyPath: _damageInterval
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 466529165042165860, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
+      propertyPath: _criticalMultiplier
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 466529165042165860, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
+      propertyPath: _criticalSwingThreshold
+      value: 250
+      objectReference: {fileID: 0}
     - target: {fileID: 590527080061480150, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
       propertyPath: m_Layer
       value: 9

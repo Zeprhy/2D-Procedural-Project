@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1117130067218123304}
   - component: {fileID: 2273714863830164004}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Weapon_Sprite
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -100,7 +100,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6142724798338371945}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Grip_Point_R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -133,7 +133,7 @@ GameObject:
   - component: {fileID: 4040376587960482514}
   - component: {fileID: 961978717052433269}
   - component: {fileID: 466529165042165860}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Weapon_Pivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -148,7 +148,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6231095779114141848}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -0, z: -0.34576723, w: -0.9383204}
+  m_LocalRotation: {x: 0, y: 0, z: 0.345765, w: 0.93832123}
   m_LocalPosition: {x: -0.01, y: 1.11, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -156,7 +156,7 @@ Transform:
   - {fileID: 1117130067218123304}
   - {fileID: 6142724798338371945}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 40.457}
 --- !u!60 &961978717052433269
 PolygonCollider2D:
   m_ObjectHideFlags: 0
@@ -245,7 +245,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponLogic
   _weaponData: {fileID: 11400000, guid: cc185da694878734285c42f29bdf9512, type: 2}
-  _damageInterval: 0.5
+  _damageInterval: 3
   _targetLayer:
     serializedVersion: 2
     m_Bits: 4096
+  _criticalSwingThreshold: 250
+  _hitStopDuration: 0.08
+  _criticalMultiplier: 1.5
