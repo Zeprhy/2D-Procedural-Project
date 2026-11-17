@@ -47,6 +47,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DummyEntity
   _entityData: {fileID: 11400000, guid: a44dbda632ab5f34ea36caa195ad3fb0, type: 2}
+  _flashMaterial: {fileID: 2100000, guid: 637210ffabe8dd24990e599247d5976b, type: 2}
+  _flashDuration: 0.08
 --- !u!50 &510632423918240436
 Rigidbody2D:
   serializedVersion: 5
