@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections;
 using _Scripts.Interface;
 
+[RequireComponent(typeof(Rigidbody2D))]
 public class DummyEntity : MonoBehaviour, IDamageable
 {
     [Header("Data Entity (ScriptableObject)")]
@@ -29,7 +30,9 @@ public class DummyEntity : MonoBehaviour, IDamageable
         _rb.freezeRotation = true;
 
         if (_spriteRenderer != null)
+        {
             _originalMaterial = _spriteRenderer.sharedMaterial;
+        }
 
         if (_entityData != null)
             _currentHealth = _entityData.MaxHealth;
@@ -40,8 +43,10 @@ public class DummyEntity : MonoBehaviour, IDamageable
         RestoreOriginalMaterial();
     }
 
+    // Overload 1: Tanpa knockback 
     public void TakeDamage(float damageAmount) => TakeDamage(damageAmount, Vector2.zero);
-
+    
+    // Overload 2: Dengan knockback fisik
     public void TakeDamage(float damageAmount, Vector2 knockbackForce)
     {
         ApplyKnockback(knockbackForce);
@@ -60,9 +65,11 @@ public class DummyEntity : MonoBehaviour, IDamageable
     {
         if (_rb == null || force == Vector2.zero) return;
 
+        // Hitung resistansi (semakin tinggi, dorongan semakin kecil)
         float effectiveMultiplier = Mathf.Clamp01(1f - _knockbackResistance);
         Vector2 finalForce = force * effectiveMultiplier;
 
+        // Reset velocity sesaat agar dorongan konsisten, lalu terapkan gaya
         _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
         _rb.AddForce(finalForce, ForceMode2D.Impulse);
     }
@@ -80,9 +87,7 @@ public class DummyEntity : MonoBehaviour, IDamageable
     private IEnumerator HitFlashRoutine()
     {
         _spriteRenderer.sharedMaterial = _flashMaterial;
-
         yield return new WaitForSecondsRealtime(_flashDuration);
-
         RestoreOriginalMaterial();
         _flashRoutine = null;
     }
@@ -90,7 +95,9 @@ public class DummyEntity : MonoBehaviour, IDamageable
     private void RestoreOriginalMaterial()
     {
         if (_spriteRenderer != null && _originalMaterial != null)
+        {
             _spriteRenderer.sharedMaterial = _originalMaterial;
+        }
     }
 
     private void Die()

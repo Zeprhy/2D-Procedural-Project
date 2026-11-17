@@ -78,12 +78,11 @@ public class WeaponLogic : MonoBehaviour
         yield return new WaitForSecondsRealtime(duration);
         Time.timeScale = 1.0f;
     }
+
     private IEnumerator TargetDamageCooldownRoutine(IDamageable victim)
     {
         _coolingDownTargets.Add(victim);
-        
         yield return new WaitForSeconds(_damageInterval);
-        
         _coolingDownTargets.Remove(victim);
     }
 
@@ -107,12 +106,12 @@ public class WeaponLogic : MonoBehaviour
         float baseDamage = (_weaponData is MeleeWeaponSO melee) ? melee.Damage : 10f;
         float finalDamage = isCritical ? (baseDamage * _criticalMultiplier) : baseDamage;
 
-        // Camera Shake (Eksisting)
+        // 2. Camera Shake (Eksisting)
         float weaponWeight = _weaponData != null ? _weaponData.Weight : 5f;
         if (CameraFollow2D.Instance != null)
             CameraFollow2D.Instance.TriggerHitImpact(weaponWeight, isCritical);
 
-        // Floating Damage Pop up (Eksisting)
+        // 3. Floating Damage Text (Eksisting)
         if (_damageTextPrefab != null)
         {
             Vector3 spawnPos = target.bounds.center + new Vector3(Random.Range(-0.2f, 0.2f), 0.5f, 0);
@@ -120,11 +119,11 @@ public class WeaponLogic : MonoBehaviour
             popUp.Setup(finalDamage, isCritical);
         }
 
-        // Hit stop (Eksisting)
+        // 4. Hit Stop (Eksisting)
         if (isCritical)
             StartCoroutine(HitStopRoutine(_hitStopDuration));
 
-        // Knockback + Recoil fisik
+        // Hitung Arah & Terapkan Knockback + Recoil Fisik
         float hitDirX = 1f;
         if (_currentOwner != null)
         {
@@ -135,21 +134,23 @@ public class WeaponLogic : MonoBehaviour
                 hitDirX = Mathf.Sign(transform.lossyScale.x);
         }
 
-        // Modulasi knockback berdasarkan Weight senjata dan critical
+        // Modulasi Knockback berdasarkan Bobot Senjata & Critical
         float weightMod = Mathf.Max(0.5f, weaponWeight / 5f);
         float finalKnockback = _baseKnockbackForce * weightMod * (isCritical ? 1.4f : 1.0f);
         Vector2 knockbackVector = new Vector2(hitDirX * finalKnockback, _knockbackUpwardLift);
 
+        // Berikan Micro-Recoil ke Player
         if (_currentOwner != null)
         {
-            PlatformerMovement playermovement = _currentOwner.GetComponent<PlatformerMovement>();
-            if (playermovement != null)
-                playermovement.ApplyMicroRecoil(_playerRecoilForce, hitDirX);
+            PlatformerMovement playerMovement = _currentOwner.GetComponent<PlatformerMovement>();
+            if (playerMovement != null)
+            {
+                playerMovement.ApplyMicroRecoil(_playerRecoilForce, hitDirX);
+            }
         }
 
-        // TargetDamage Interval
+        // Terapkan Damage & Knockback ke Musuh
         StartCoroutine(TargetDamageCooldownRoutine(damageable));
-        if (damageable != null)
-            damageable.TakeDamage(finalDamage);
+        damageable.TakeDamage(finalDamage, knockbackVector);
     }
 }

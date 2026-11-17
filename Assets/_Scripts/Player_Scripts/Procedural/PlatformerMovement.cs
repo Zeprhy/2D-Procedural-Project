@@ -62,10 +62,10 @@ public class PlatformerMovement : MonoBehaviour
     {
         if (Freeze) return;
 
-        // Derealisasi Recoil menuju 0 dengan halus
+        // Deselerasi recoil menuju 0 secara halus
         _recoilVelocityX = Mathf.MoveTowards(_recoilVelocityX, 0f, _recoilDecayRate * Time.fixedDeltaTime);
 
-        // Karakter melambat 40% saat mendaki tangga agar gerakannya tenang/santai
+        // Karakter melambat 40% saat mendaki tangga
         float speedMultiplier = _isClimbing ? 0.6f : 1.0f;
         float targetSpeed = _playerInput.InputX * (_speed * speedMultiplier);
 
@@ -73,8 +73,9 @@ public class PlatformerMovement : MonoBehaviour
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? _acceleration : _deceleration;
         float movement = speedDiff * accelRate * Time.fixedDeltaTime;
 
-        float finalVelx = _rigidbody.linearVelocity.x + movement + _recoilVelocityX;
-        _rigidbody.linearVelocity = new Vector2(finalVelx, _rigidbody.linearVelocity.y);
+        // Gabungkan gerakan normal dengan sisa gaya recoil
+        float finalVelX = _rigidbody.linearVelocity.x + movement + _recoilVelocityX;
+        _rigidbody.linearVelocity = new Vector2(finalVelX, _rigidbody.linearVelocity.y);
 
         if (IsMoving && _isGrounded)
             HandleStepClimb();
@@ -95,8 +96,8 @@ public class PlatformerMovement : MonoBehaviour
     /// <summary>
     /// Menerima dorongan recoil sesaat (berlawanan arah serangan)
     /// </summary>
-    public void ApplyMicroRecoil(float recoilForce, float hitDirectionX) => _recoilVelocityX = -hitDirectionX * recoilForce;
-
+    /// // Arah recoil berlawanan dengan arah hit (-hitDirectionX)
+    public void ApplyMicroRecoil(float recoilForce, float hitDirectionX) => _recoilVelocityX = -hitDirectionX * recoilForce; 
     private void HandleStepClimb()
     {
         float direction = Mathf.Sign(_playerInput.InputX);
@@ -108,7 +109,6 @@ public class PlatformerMovement : MonoBehaviour
 
         if (hitLower.collider != null && hitUpper.collider == null)
         {
-            // Tolak lereng yang terlalu curam (bukan anak tangga)
             float surfaceAngle = Vector2.Angle(hitLower.normal, Vector2.up);
             if (surfaceAngle > _maxSlopeAngle && surfaceAngle < 85f)
             {
