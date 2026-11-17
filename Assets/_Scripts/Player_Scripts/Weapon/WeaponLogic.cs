@@ -15,9 +15,16 @@ public class WeaponLogic : MonoBehaviour
     [Header("Target Layer")]
     [SerializeField] private LayerMask _targetLayer;
 
-    [Header("Juicy Effect: Hit Stop & Critical")]
+    [Header("Juicy Effect: Hit Stop / Freeze Frame")]
+    [Tooltip("Nilai timeScale saat freeze (0.05f = micro slow-mo dramatis, 0.0f = pure freeze)")]
+    [SerializeField] private float _hitStopTimeScale = 0.05f;
+    [Tooltip("Durasi freeze untuk serangan biasa")]
+    [SerializeField] private float _normalHitStopDuration = 0.035f;
+    [Tooltip("Durasi freeze untuk serangan Critical")]
+    [SerializeField] private float _criticalHitStopDuration = 0.09f;
+
+    [Header("Juicy Effect: Critical & Angular")]
     [SerializeField] private float _criticalSwingThreshold = 250f;
-    [SerializeField] private float _hitStopDuration = 0.08f;
     [SerializeField] private float _criticalMultiplier = 2.0f;
 
     [Header("Juicy Effect: Knockback & Recoil")]
@@ -35,6 +42,10 @@ public class WeaponLogic : MonoBehaviour
     private bool _isAttacking;
     private HashSet<IDamageable> _coolingDownTargets = new HashSet<IDamageable>();
 
+    // Variabel Pengontrol Hit Stop Aman
+    private float _hitStopEndTime;
+    private Coroutine _hitStopRoutine;
+
     private void Awake()
     {
         _hitbox = GetComponent<PolygonCollider2D>();
@@ -43,11 +54,19 @@ public class WeaponLogic : MonoBehaviour
 
     private void Update()
     {
-        float currentAngle = transform.eulerAngles.z;
-        float angleDelta = Mathf.DeltaAngle(_lastWeaponAngle, currentAngle);
+        float dt = Time.unscaledDeltaTime;
+        if (dt > 0f)
+        {
+            float currentAngle = transform.eulerAngles.z;
+            float angleDelta = Mathf.DeltaAngle(_lastWeaponAngle, currentAngle);
+            _currentAngularSpeed = angleDelta / dt;
+            _lastWeaponAngle = currentAngle;
+        } 
+    }
 
-        _currentAngularSpeed = angleDelta / Time.deltaTime;
-        _lastWeaponAngle = currentAngle;
+    private void OnDisable()
+    {
+        RestoreTimeScale();
     }
 
     public void TriggerAttack(GameObject owner)
@@ -120,10 +139,9 @@ public class WeaponLogic : MonoBehaviour
         }
 
         // 4. Hit Stop (Eksisting)
-        if (isCritical)
-            StartCoroutine(HitStopRoutine(_hitStopDuration));
+        RequestHitStop(isCritical);
 
-        // Hitung Arah & Terapkan Knockback + Recoil Fisik
+        //  Knockback Musuh & Recoil Player
         float hitDirX = 1f;
         if (_currentOwner != null)
         {
@@ -144,13 +162,54 @@ public class WeaponLogic : MonoBehaviour
         {
             PlatformerMovement playerMovement = _currentOwner.GetComponent<PlatformerMovement>();
             if (playerMovement != null)
-            {
                 playerMovement.ApplyMicroRecoil(_playerRecoilForce, hitDirX);
-            }
         }
 
         // Terapkan Damage & Knockback ke Musuh
         StartCoroutine(TargetDamageCooldownRoutine(damageable));
         damageable.TakeDamage(finalDamage, knockbackVector);
     }
+
+    #region Hit Stop Management
+
+    private void RequestHitStop(bool isCritical)
+    {
+        float duration = isCritical ? _criticalHitStopDuration : _normalHitStopDuration;
+        if (duration <= 0f) return;
+
+        float newEndTime = Time.unscaledTime + duration;
+        if (newEndTime > _hitStopEndTime)
+            _hitStopEndTime = newEndTime;
+
+        if (_hitStopRoutine == null)
+            _hitStopRoutine = StartCoroutine(HitStopWorker());
+    }
+
+
+
+    private IEnumerator HitStopWorker()
+    {
+        Time.timeScale = _hitStopTimeScale;
+
+        while (Time.unscaledTime < _hitStopEndTime)
+        {
+            yield return null;
+        }
+
+        RestoreTimeScale();
+    }
+
+    private void RestoreTimeScale()
+    {
+        Time.timeScale = 1.0f;
+        _hitStopEndTime = 0f;
+        if (_hitStopRoutine != null)
+        {
+            StopCoroutine(_hitStopRoutine);
+            _hitStopRoutine = null;
+        }
+    }
+
+    
+    #endregion
 }
