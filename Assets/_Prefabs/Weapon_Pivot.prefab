@@ -132,6 +132,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4040376587960482514}
   - component: {fileID: 961978717052433269}
+  - component: {fileID: 466529165042165860}
   m_Layer: 0
   m_Name: Weapon_Pivot
   m_TagString: Untagged
@@ -231,3 +232,20 @@ PolygonCollider2D:
       - {x: 0.21013202, y: 0.1047021}
       - {x: 0.55284995, y: 0.67177343}
   m_UseDelaunayMesh: 1
+--- !u!114 &466529165042165860
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6231095779114141848}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ccf1d25b3da42146a19519e976e3e4a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponLogic
+  _weaponData: {fileID: 11400000, guid: cc185da694878734285c42f29bdf9512, type: 2}
+  _damageInterval: 0.5
+  _targetLayer:
+    serializedVersion: 2
+    m_Bits: 4096

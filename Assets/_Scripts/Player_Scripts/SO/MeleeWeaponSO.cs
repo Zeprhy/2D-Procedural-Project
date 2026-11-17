@@ -14,6 +14,6 @@ public class MeleeWeaponSO : BaseWeaponSO
 
     public override void Activate(GameObject owner, WeaponLogic weaponLogic)
     {
-        // weaponLogic.PerformMeleeSlash(this);
+        weaponLogic.PerformMeleeSlash(owner, this);
     }
 }
