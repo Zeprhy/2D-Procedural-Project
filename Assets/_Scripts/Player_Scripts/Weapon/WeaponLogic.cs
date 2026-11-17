@@ -20,6 +20,11 @@ public class WeaponLogic : MonoBehaviour
     [SerializeField] private float _hitStopDuration = 0.08f;
     [SerializeField] private float _criticalMultiplier = 2.0f;
 
+    [Header("Juicy Effect: Knockback & Recoil")]
+    [SerializeField] private float _baseKnockbackForce = 7f;
+    [SerializeField] private float _knockbackUpwardLift = 2.5f;
+    [SerializeField] private float _playerRecoilForce = 3.5f;
+
     [Header("Juicy Effect: Floating Damage Text")]
     [SerializeField] private DamagePopUp2D _damageTextPrefab;
 
@@ -102,10 +107,12 @@ public class WeaponLogic : MonoBehaviour
         float baseDamage = (_weaponData is MeleeWeaponSO melee) ? melee.Damage : 10f;
         float finalDamage = isCritical ? (baseDamage * _criticalMultiplier) : baseDamage;
 
+        // Camera Shake (Eksisting)
         float weaponWeight = _weaponData != null ? _weaponData.Weight : 5f;
         if (CameraFollow2D.Instance != null)
             CameraFollow2D.Instance.TriggerHitImpact(weaponWeight, isCritical);
 
+        // Floating Damage Pop up (Eksisting)
         if (_damageTextPrefab != null)
         {
             Vector3 spawnPos = target.bounds.center + new Vector3(Random.Range(-0.2f, 0.2f), 0.5f, 0);
@@ -113,9 +120,34 @@ public class WeaponLogic : MonoBehaviour
             popUp.Setup(finalDamage, isCritical);
         }
 
+        // Hit stop (Eksisting)
         if (isCritical)
             StartCoroutine(HitStopRoutine(_hitStopDuration));
-    
+
+        // Knockback + Recoil fisik
+        float hitDirX = 1f;
+        if (_currentOwner != null)
+        {
+            float diffX = target.bounds.center.x - _currentOwner.transform.position.x;
+            if (Mathf.Abs(diffX) > 0.01f)
+                hitDirX = Mathf.Sign(diffX);
+            else
+                hitDirX = Mathf.Sign(transform.lossyScale.x);
+        }
+
+        // Modulasi knockback berdasarkan Weight senjata dan critical
+        float weightMod = Mathf.Max(0.5f, weaponWeight / 5f);
+        float finalKnockback = _baseKnockbackForce * weightMod * (isCritical ? 1.4f : 1.0f);
+        Vector2 knockbackVector = new Vector2(hitDirX * finalKnockback, _knockbackUpwardLift);
+
+        if (_currentOwner != null)
+        {
+            PlatformerMovement playermovement = _currentOwner.GetComponent<PlatformerMovement>();
+            if (playermovement != null)
+                playermovement.ApplyMicroRecoil(_playerRecoilForce, hitDirX);
+        }
+
+        // TargetDamage Interval
         StartCoroutine(TargetDamageCooldownRoutine(damageable));
         if (damageable != null)
             damageable.TakeDamage(finalDamage);

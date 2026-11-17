@@ -12,6 +12,11 @@ public class PlatformerMovement : MonoBehaviour
     [SerializeField] private float _acceleration = 40f;
     [SerializeField] private float _deceleration = 30f;
 
+    [Header("Juicy Effect: Micro-Recoil")]
+    [Tooltip("Kecepatan meluruh recoil (semakin tinggi, recoil semakin cepat berhenti)")]
+    [SerializeField] private float _recoilDecayRate = 25f;
+    private float _recoilVelocityX;
+
     [Header("Lompatan & Gravitasi")]
     [SerializeField] private float _jumpForce = 12f;
     [SerializeField] private float _fallMultiplier = 3f;
@@ -57,6 +62,9 @@ public class PlatformerMovement : MonoBehaviour
     {
         if (Freeze) return;
 
+        // Derealisasi Recoil menuju 0 dengan halus
+        _recoilVelocityX = Mathf.MoveTowards(_recoilVelocityX, 0f, _recoilDecayRate * Time.fixedDeltaTime);
+
         // Karakter melambat 40% saat mendaki tangga agar gerakannya tenang/santai
         float speedMultiplier = _isClimbing ? 0.6f : 1.0f;
         float targetSpeed = _playerInput.InputX * (_speed * speedMultiplier);
@@ -65,7 +73,8 @@ public class PlatformerMovement : MonoBehaviour
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? _acceleration : _deceleration;
         float movement = speedDiff * accelRate * Time.fixedDeltaTime;
 
-        _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x + movement, _rigidbody.linearVelocity.y);
+        float finalVelx = _rigidbody.linearVelocity.x + movement + _recoilVelocityX;
+        _rigidbody.linearVelocity = new Vector2(finalVelx, _rigidbody.linearVelocity.y);
 
         if (IsMoving && _isGrounded)
             HandleStepClimb();
@@ -82,6 +91,11 @@ public class PlatformerMovement : MonoBehaviour
             _rigidbody.linearVelocity += Vector2.up * (Physics2D.gravity.y * (_lowJumpMultiplier - 1) * Time.fixedDeltaTime);
         }
     }
+
+    /// <summary>
+    /// Menerima dorongan recoil sesaat (berlawanan arah serangan)
+    /// </summary>
+    public void ApplyMicroRecoil(float recoilForce, float hitDirectionX) => _recoilVelocityX = -hitDirectionX * recoilForce;
 
     private void HandleStepClimb()
     {

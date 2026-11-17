@@ -49,6 +49,7 @@ MonoBehaviour:
   _entityData: {fileID: 11400000, guid: a44dbda632ab5f34ea36caa195ad3fb0, type: 2}
   _flashMaterial: {fileID: 2100000, guid: 637210ffabe8dd24990e599247d5976b, type: 2}
   _flashDuration: 0.08
+  _knockbackResistance: 0
 --- !u!50 &510632423918240436
 Rigidbody2D:
   serializedVersion: 5
@@ -57,14 +58,14 @@ Rigidbody2D:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1487753632079592930}
-  m_BodyType: 1
+  m_BodyType: 0
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 1
-  m_LinearDamping: 0
+  m_LinearDamping: 4
   m_AngularDamping: 0.05
-  m_GravityScale: 1
+  m_GravityScale: 3
   m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
@@ -159,7 +160,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: -9095717837082945937, guid: 207ee8102dd4143d288186ef0be518ee, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.03601989, g: 0.24528301, b: 0.0161979, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
