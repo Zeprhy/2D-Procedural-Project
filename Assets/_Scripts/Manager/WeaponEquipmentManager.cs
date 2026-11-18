@@ -8,9 +8,10 @@ public class WeaponEquipmentManager : MonoBehaviour
     [SerializeField] private Transform _rightHandHolder;
 
     [Header("Senjata Awal (Eksisting / Default)")]
-    [Tooltip("WeaponLogic pedang yang sedang digunakan saat ini (untuk transisi aman)")]
+    [Tooltip("WeaponLogic pedang yang sedang digunakan saat ini")]
     [SerializeField] private WeaponLogic _initialWeapon;
 
+    // Properti publik untuk status equipment
     public WeaponLogic CurrentWeapon { get; private set; }
     public bool HasEquippedWeapon => CurrentWeapon != null;
 
@@ -20,28 +21,43 @@ public class WeaponEquipmentManager : MonoBehaviour
             _rightHandController = GetComponentInChildren<RightHandController2D>();
     }
 
-    private void Start()
+    private void OnEnable()
     {
         if (GameManager.Instance != null)
+        {
             GameManager.Instance.RegisterWeaponEquipmentManager(this);
-        else
-            Debug.LogError("<color=red>[WeaponEquipmentManager]</color> GameManager.Instance tidak ditemukan di Scene! Pastikan ada GameObject dengan komponen GameManager.", this);
-
-
-        if (_initialWeapon != null)
-            EquipExistingWeapon(_initialWeapon);
-        else if (_rightHandController != null && _rightHandController.EquippedWeapon != null)
-            EquipExistingWeapon(_rightHandController.EquippedWeapon);
+        }
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
         if (GameManager.Instance != null)
+        {
             GameManager.Instance.UnregisterWeaponEquipmentManager(this);
+        }
+    }
+
+    private void Start()
+    {
+        // Safety check jika GameManager baru siap di frame yang sama
+        if (GameManager.Instance != null && GameManager.Instance.WeaponEquipmentManager != this)
+        {
+            GameManager.Instance.RegisterWeaponEquipmentManager(this);
+        }
+
+        // Transisi aman: pasang pedang awal ke RightHandController
+        if (_initialWeapon != null)
+        {
+            EquipExistingWeapon(_initialWeapon);
+        }
+        else if (_rightHandController != null && _rightHandController.EquippedWeapon != null)
+        {
+            EquipExistingWeapon(_rightHandController.EquippedWeapon);
+        }
     }
 
     /// <summary>
-    /// Memasang senjata runtime yang sudah ada ke slot tangan kanan
+    /// Memasang senjata ke slot tangan kanan
     /// </summary>
     public void EquipExistingWeapon(WeaponLogic weapon)
     {
@@ -53,11 +69,16 @@ public class WeaponEquipmentManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Melepaskan senjata dari slot tangan kanan
+    /// </summary>
     public void UnequipWeapon()
     {
         CurrentWeapon = null;
 
         if (_rightHandController != null)
+        {
             _rightHandController.ClearEquippedWeapon();
+        }
     }
 }

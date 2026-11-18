@@ -1,9 +1,10 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-[DefaultExecutionOrder(-100)] // Memastikan GameManager siap sebelum script gameplay lainnya berjalan
+[DefaultExecutionOrder(-100)] // Memastikan GameManager siap sebelum script player/gameplay berjalan
 public class GameManager : MonoBehaviour
 {
+    // HANYA GameManager yang boleh mendeklarasikan static Instance (Strict Singleton)
     public static GameManager Instance { get; private set; }
 
     [Header("Lifecycle Settings")]
@@ -11,10 +12,15 @@ public class GameManager : MonoBehaviour
     [SerializeField] private bool _dontDestroyOnLoad = false;
 
     [Header("Equipment & Combat Managers")]
-    [Tooltip("Manager equipment senjata pemain")]
+    [Tooltip("Referensi WeaponEquipmentManager aktif (diisi via Inspector atau otomatis saat Player spawn)")]
     [SerializeField] private WeaponEquipmentManager _weaponEquipmentManager;
 
-    public WeaponEquipmentManager WeaponEquipmentManager {get; private set;}
+    // CORRECTION 1 & 2: Properti publik dengan 'private set' yang sinkron 100% dengan backing field
+    public WeaponEquipmentManager WeaponEquipmentManager
+    {
+        get => _weaponEquipmentManager;
+        private set => _weaponEquipmentManager = value;
+    }
 
     private bool _hasInitialized = false;
 
@@ -37,8 +43,15 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void OnEnable() => SceneManager.sceneLoaded += OnSceneLoaded;
-    private void OnDisable() => SceneManager.sceneLoaded -= OnSceneLoaded;
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
 
     private void Start()
     {
@@ -46,35 +59,41 @@ public class GameManager : MonoBehaviour
         InitializeManagers();
     }
 
+    // CORRECTION 3: Penanganan pergantian scene yang aman dari stale reference
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        // Bersihkan referensi usang jika objek dari scene sebelumnya sudah hancur
+        if (_weaponEquipmentManager == null)
+        {
+            WeaponEquipmentManager = null;
+        }
+
         _hasInitialized = false;
         InitializeManagers();
     }
 
     /// <summary>
-    /// Menginisialisasi referensi manager dengan fallback otomatis (Pola arsitektur modular)
+    /// Jalur inisialisasi / fallback jika manager belum terdaftar via OnEnable Player
     /// </summary>
     private void InitializeManagers()
     {
         if (_hasInitialized) return;
         _hasInitialized = true;
 
-        // 1. Cari WeaponEquipmentManager jika belum di-assign di Inspector
-        // Cek dulu apakah ada di child GameManager, jika tidak ada cari di Player scene
-        if (_weaponEquipmentManager == null)
+        // Jika properti masih kosong (atau referensi lama hancur), lakukan pencarian fallback di scene baru
+        if (WeaponEquipmentManager == null)
         {
-            _weaponEquipmentManager = GetComponentInChildren<WeaponEquipmentManager>();
-            if (_weaponEquipmentManager == null)
+            WeaponEquipmentManager found = GetComponentInChildren<WeaponEquipmentManager>();
+            if (found == null)
             {
-                _weaponEquipmentManager = FindFirstObjectByType<WeaponEquipmentManager>();
+                found = FindFirstObjectByType<WeaponEquipmentManager>();
+            }
+
+            if (found != null)
+            {
+                RegisterWeaponEquipmentManager(found);
             }
         }
-
-        // CATATAN UNTUK STAGE BERIKUTNYA:
-        // Di Stage 3 & 4 nanti, ItemDropManager dan LootManager akan kita tambahkan di sini
-        // persis mengikuti pola yang sama:
-        // if (_itemDropManager == null) _itemDropManager = GetComponentInChildren<ItemDropManager>();
     }
 
     private void OnDestroy()
@@ -85,16 +104,27 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    #region Manager Registration
+
+    /// <summary>
+    /// CORRECTION 2 & 4: Satu-satunya jalur registrasi resmi untuk WeaponEquipmentManager
+    /// </summary>
     public void RegisterWeaponEquipmentManager(WeaponEquipmentManager manager)
     {
+        if (manager == null) return;
+
         if (WeaponEquipmentManager != null && WeaponEquipmentManager != manager)
         {
-            Debug.LogWarning($"<color=yellow>[GameManager]</color> Mengganti registrasi WeaponEquipmentManager lama dengan instance baru.", this);
+            Debug.LogWarning($"<color=yellow>[GameManager]</color> Mengganti WeaponEquipmentManager lama dengan instance baru.", this);
         }
 
+        // Sinkronkan backing field dan properti publik secara bersamaan
         WeaponEquipmentManager = manager;
     }
 
+    /// <summary>
+    /// CORRECTION 3 & 4: Membersihkan referensi saat Player di-disable atau dihancurkan
+    /// </summary>
     public void UnregisterWeaponEquipmentManager(WeaponEquipmentManager manager)
     {
         if (WeaponEquipmentManager == manager)
@@ -102,4 +132,6 @@ public class GameManager : MonoBehaviour
             WeaponEquipmentManager = null;
         }
     }
+
+    #endregion
 }
