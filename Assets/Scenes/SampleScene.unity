@@ -1894,6 +1894,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   _dontDestroyOnLoad: 1
+  _weaponEquipmentManager: {fileID: 7469781701559126105}
 --- !u!4 &1605004199
 Transform:
   m_ObjectHideFlags: 0
@@ -2522,7 +2523,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponEquipmentManager
   _rightHandController: {fileID: 761505123}
   _rightHandHolder: {fileID: 7469781702973571908}
-  _initialWeapon: {fileID: 0}
+  _initialWeapon: {fileID: 2002870766}
 --- !u!4 &7469781701598909632
 Transform:
   m_ObjectHideFlags: 0
