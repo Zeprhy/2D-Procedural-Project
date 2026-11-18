@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class OneHandWeaponController2D : MonoBehaviour
+public class RightHandController2D : MonoBehaviour
 {
     [Header("Referensi Input")]
     [SerializeField] private PlayerAimTracker2D _aimTracker;
