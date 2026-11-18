@@ -49,7 +49,7 @@ public class CombatVFXController : MonoBehaviour
     /// </summary>
     public void PlayCriticalHit(Vector3 hitPoint, Vector2 hitDirection)
     {
-        if (_vfxPrefab == null || _normalHitSprites == null || _normalHitSprites.Length == 0) return;
+        if (_vfxPrefab == null || _criticalHitSprites == null || _criticalHitSprites.Length == 0) return;
 
         Sprite selectedSprite = _criticalHitSprites[Random.Range(0, _criticalHitSprites.Length)];
         if (selectedSprite == null) return;

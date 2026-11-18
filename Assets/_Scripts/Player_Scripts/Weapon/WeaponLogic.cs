@@ -15,12 +15,14 @@ public class WeaponLogic : MonoBehaviour
     [Header("Target Layer")]
     [SerializeField] private LayerMask _targetLayer;
 
+    [Header("Juicy Effect: Combat VFX")]
+    [Tooltip("Komponen pengontrol efek visual benturan tebasan")]
+    [SerializeField] private CombatVFXController _vfxController;
+
     [Header("Juicy Effect: Hit Stop / Freeze Frame")]
     [Tooltip("Nilai timeScale saat freeze (0.05f = micro slow-mo dramatis, 0.0f = pure freeze)")]
     [SerializeField] private float _hitStopTimeScale = 0.05f;
-    [Tooltip("Durasi freeze untuk serangan biasa")]
     [SerializeField] private float _normalHitStopDuration = 0.035f;
-    [Tooltip("Durasi freeze untuk serangan Critical")]
     [SerializeField] private float _criticalHitStopDuration = 0.09f;
 
     [Header("Juicy Effect: Critical & Angular")]
@@ -42,7 +44,6 @@ public class WeaponLogic : MonoBehaviour
     private bool _isAttacking;
     private HashSet<IDamageable> _coolingDownTargets = new HashSet<IDamageable>();
 
-    // Variabel Pengontrol Hit Stop Aman
     private float _hitStopEndTime;
     private Coroutine _hitStopRoutine;
 
@@ -50,6 +51,9 @@ public class WeaponLogic : MonoBehaviour
     {
         _hitbox = GetComponent<PolygonCollider2D>();
         _hitbox.enabled = false;
+
+        if (_vfxController == null)
+            _vfxController.GetComponent<CombatVFXController>();
     }
 
     private void Update()
@@ -125,12 +129,30 @@ public class WeaponLogic : MonoBehaviour
         float baseDamage = (_weaponData is MeleeWeaponSO melee) ? melee.Damage : 10f;
         float finalDamage = isCritical ? (baseDamage * _criticalMultiplier) : baseDamage;
 
-        // 2. Camera Shake (Eksisting)
+        Vector3 contactPoint = target.bounds.ClosestPoint(transform.position);
+        Vector2 hitDirection = Vector2.right;
+
+        if (_currentOwner != null)
+        {
+            Vector2 toTarget = (target.bounds.center - _currentOwner.transform.position);
+            if (toTarget.sqrMagnitude > 0.001f)
+                hitDirection = toTarget.normalized;
+        }
+
+        if (_vfxController != null)
+        {
+            if (isCritical)
+                _vfxController.PlayCriticalHit(contactPoint, hitDirection);
+            else
+                _vfxController.PlayNormalHit(contactPoint, hitDirection);
+        }
+
+        // Camera Shake 
         float weaponWeight = _weaponData != null ? _weaponData.Weight : 5f;
         if (CameraFollow2D.Instance != null)
             CameraFollow2D.Instance.TriggerHitImpact(weaponWeight, isCritical);
 
-        // 3. Floating Damage Text (Eksisting)
+        // Floating Damage Text (Eksisting)
         if (_damageTextPrefab != null)
         {
             Vector3 spawnPos = target.bounds.center + new Vector3(Random.Range(-0.2f, 0.2f), 0.5f, 0);
@@ -138,10 +160,10 @@ public class WeaponLogic : MonoBehaviour
             popUp.Setup(finalDamage, isCritical);
         }
 
-        // 4. Hit Stop (Eksisting)
+        // Hit Stop (Eksisting)
         RequestHitStop(isCritical);
 
-        //  Knockback Musuh & Recoil Player
+        // Knockback Musuh & Recoil Player
         float hitDirX = 1f;
         if (_currentOwner != null)
         {

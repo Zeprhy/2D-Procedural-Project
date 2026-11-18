@@ -133,6 +133,7 @@ GameObject:
   - component: {fileID: 4040376587960482514}
   - component: {fileID: 961978717052433269}
   - component: {fileID: 466529165042165860}
+  - component: {fileID: 3701375873531461409}
   m_Layer: 9
   m_Name: Weapon_Pivot
   m_TagString: Untagged
@@ -249,6 +250,7 @@ MonoBehaviour:
   _targetLayer:
     serializedVersion: 2
     m_Bits: 4096
+  _vfxController: {fileID: 3701375873531461409}
   _hitStopTimeScale: 0
   _normalHitStopDuration: 0.035
   _criticalHitStopDuration: 0.09
@@ -258,3 +260,31 @@ MonoBehaviour:
   _knockbackUpwardLift: 2.5
   _playerRecoilForce: 3.5
   _damageTextPrefab: {fileID: 6164039436554372379, guid: 70aa6f87fc8f2794eab96c01cd910dbd, type: 3}
+--- !u!114 &3701375873531461409
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6231095779114141848}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd477aa8b3d6f0d48b2e12ca0b00c78f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CombatVFXController
+  _vfxPrefab: {fileID: 8866033358160712028, guid: 10f6e636800f93644a99920d6b1f13ba, type: 3}
+  _sortingLayerName: VFX
+  _sortingOrder: 100
+  _normalHitSprites:
+  - {fileID: 1058870447991651278, guid: bde271a6ba95a9c49a95d6eb0159b146, type: 3}
+  - {fileID: -1899034223220819221, guid: bde271a6ba95a9c49a95d6eb0159b146, type: 3}
+  - {fileID: 8825736434059257243, guid: bde271a6ba95a9c49a95d6eb0159b146, type: 3}
+  - {fileID: -8683019937036654884, guid: bde271a6ba95a9c49a95d6eb0159b146, type: 3}
+  _normalScale: {x: 1, y: 1, z: 1}
+  _normalLifetime: 0.07
+  _normalOffset: {x: 0, y: 0}
+  _criticalHitSprites: []
+  _criticalScale: {x: 1.5, y: 1.5, z: 1}
+  _criticalLifetime: 0.11
+  _criticalOffset: {x: 0, y: 0}
+  _randomizeCriticalRotation: 1
