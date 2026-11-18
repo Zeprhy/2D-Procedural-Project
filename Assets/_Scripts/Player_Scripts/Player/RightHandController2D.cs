@@ -20,6 +20,7 @@ public class RightHandController2D : MonoBehaviour
     [Header("Pose Santai Pedang (Saat Klik Kiri Dilepas)")]
     [SerializeField] private Vector2 _swordRestOffset = new Vector2(0.12f, -0.35f);
     [SerializeField] private float _swordRestAngle = -65f;
+
     [Header("Jangkauan Lengan Saat Membidik")]
     [SerializeField] private float _minReach = 0.20f;
     [SerializeField] private float _maxReach = 0.58f;
@@ -40,6 +41,9 @@ public class RightHandController2D : MonoBehaviour
     private float _currentAimAngle;
     private float _angleVelocity;
 
+    // Getter publik untuk membaca senjata yang sedang terdaftar
+    public WeaponLogic EquippedWeapon => _equippedWeapon;
+
     private void Start()
     {
         if (_aimTracker == null) _aimTracker = GetComponent<PlayerAimTracker2D>();
@@ -54,18 +58,19 @@ public class RightHandController2D : MonoBehaviour
 
         if (_aimTracker.IsAimingRight)
         {
+            // Null-check aman: serangan hanya dipicu jika sedang memegang senjata
             if (_equippedWeapon != null)
                 _equippedWeapon.TriggerAttack(gameObject);
 
             Vector2 toMouse = _aimTracker.MouseWorldPosition - _rightShoulderPivot.position;
             float distanceToMouse = toMouse.magnitude;
 
-            //Hitung Jarak Pegas:
+            // Hitung Jarak Pegas:
             _currentSpringReach = ProceduralArmMath.UpdateSpringReach(
                 distanceToMouse, _mouseNearDist, _mouseFarDist, _minReach, _maxReach, 
                 _springStiffness, _springDamping, ref _reachVelocity, _currentSpringReach, Time.deltaTime);
 
-            //Hitung Sudut Bidik:
+            // Hitung Sudut Bidik:
             _currentAimAngle = ProceduralArmMath.UpdateAimAngle(
                 toMouse, facingDir, _minAimAngle, _maxAimAngle, _aimLagTime, ref _angleVelocity, _currentAimAngle);
 
@@ -86,7 +91,6 @@ public class RightHandController2D : MonoBehaviour
 
             if (_rHandBone != null) _rHandBone.rotation = swordRotation;
         }
-
         else
         {
             // Tangan kanan dan pedang turun santai di samping paha
@@ -101,4 +105,24 @@ public class RightHandController2D : MonoBehaviour
             _currentSpringReach = _minReach;
         }
     }
+
+    #region Weapon Binding API
+
+    /// <summary>
+    /// Dipanggil oleh WeaponEquipmentManager untuk mendaftarkan senjata yang sedang aktif
+    /// </summary>
+    public void SetEquippedWeapon(WeaponLogic weapon)
+    {
+        _equippedWeapon = weapon;
+    }
+
+    /// <summary>
+    /// Mengosongkan referensi senjata saat tangan tidak memegang apapun
+    /// </summary>
+    public void ClearEquippedWeapon()
+    {
+        _equippedWeapon = null;
+    }
+
+    #endregion
 }
