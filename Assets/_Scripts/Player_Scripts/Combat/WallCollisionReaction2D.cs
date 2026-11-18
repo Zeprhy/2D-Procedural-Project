@@ -1,4 +1,3 @@
-using System.Linq;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -57,52 +56,61 @@ public class WallCollisionReaction2D : MonoBehaviour
 
     private void FixedUpdate()
     {
-        _rb = _rb != null ? _rb : GetComponent<Rigidbody2D>();
-        _preCollisionVelocity = _rb.linearVelocity;
+        if (_rb != null)
+            _preCollisionVelocity = _rb.linearVelocity;
     }
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (Time.time < _lastReboundTime + _reboundCooldown) return;
 
-        if (((1 << collision.gameObject.layer) & _wallLayer.value ) == 0) return;
+        // Cek Layer
+        if (((1 << collision.gameObject.layer) & _wallLayer.value) == 0) return;
 
         if (collision.contactCount == 0) return;
         ContactPoint2D contact = collision.GetContact(0);
 
         Vector2 wallNormal = contact.normal;
+        
+        // Pastikan menabrak dinding vertikal (bukan lantai)
         if (Mathf.Abs(wallNormal.x) < _minWallNormalX) return;
 
+        // Hitung kecepatan benturan menuju dinding
         float closingSpeed = -Vector2.Dot(_preCollisionVelocity, wallNormal);
         if (closingSpeed < _minImpactSpeed) return;
 
         _lastReboundTime = Time.time;
+        
+        // Terapkan Rebound
         ApplyReboundPhysics(wallNormal, closingSpeed);
 
+        // Terapkan Wall Squash
         if (_triggerVisualSquash && _dummyEntity != null)
             _dummyEntity.TriggerWallImpactSquash(_wallSquashXMultiplier, _wallSquashDuration, _wallRecoverDuration);
 
+        // Munculkan VFX
         SpawnImpactVFX(contact.point, wallNormal);
     }
 
-    private void ApplyReboundPhysics(Vector2 wallNormal , float closingSpeed)
+    private void ApplyReboundPhysics(Vector2 wallNormal, float closingSpeed)
     {
-        Vector2 normalReboundvel = wallNormal * (closingSpeed * _reboundStrength);
+        Vector2 normalReboundVel = wallNormal * (closingSpeed * _reboundStrength);
 
         Vector2 tangent = new Vector2(-wallNormal.y, wallNormal.x);
         float tangentSpeed = Vector2.Dot(_preCollisionVelocity, tangent);
-        Vector2 tangentiaAlvel = tangent * (tangentSpeed * _tangentialDamping);
+        Vector2 tangentialVel = tangent * (tangentSpeed * _tangentialDamping);
 
-        Vector2 finalVelocity = normalReboundvel + tangentiaAlvel;
+        Vector2 finalVelocity = normalReboundVel + tangentialVel;
 
         if (_useUpwardLift && _upwardLift > 0f)
             finalVelocity.y = Mathf.Max(finalVelocity.y, _upwardLift);
         
         _rb.linearVelocity = finalVelocity;
     }
+
     private void SpawnImpactVFX(Vector2 contactPoint, Vector2 wallNormal)
     {
-        if (_vfxPrefab == null || _wallImpactSprites == null || _wallImpactSprites.Length == 0 ) return;
+        if (_vfxPrefab == null || _wallImpactSprites == null || _wallImpactSprites.Length == 0) return;
 
         Sprite selectedSprite = _wallImpactSprites[Random.Range(0, _wallImpactSprites.Length)];
         if (selectedSprite == null) return;
@@ -113,5 +121,4 @@ public class WallCollisionReaction2D : MonoBehaviour
         HitVFXInstance instance = Instantiate(_vfxPrefab);
         instance.Setup(selectedSprite, contactPoint, rotation, _vfxScale, _vfxLifetime, _sortingLayerName, _sortingOrder);
     }
-
 }

@@ -18,9 +18,8 @@ public class OneHandWeaponController2D : MonoBehaviour
     [SerializeField] private WeaponLogic _equippedWeapon;
 
     [Header("Pose Santai Pedang (Saat Klik Kiri Dilepas)")]
-    [SerializeField] private Vector2 _swordRestOffset = new Vector2(0.12f, -0.35f); // Posisi pedang di samping paha
-    [SerializeField] private float _swordRestAngle = -65f; // Sudut pedang menunjuk ke bawah
-
+    [SerializeField] private Vector2 _swordRestOffset = new Vector2(0.12f, -0.35f);
+    [SerializeField] private float _swordRestAngle = -65f;
     [Header("Jangkauan Lengan Saat Membidik")]
     [SerializeField] private float _minReach = 0.20f;
     [SerializeField] private float _maxReach = 0.58f;
