@@ -178,6 +178,47 @@ public class DummyEntity : MonoBehaviour, IDamageable
         _squashRoutine = null;
     }
 
+    public void TriggerWallImpactSquash(float squashXMultiplier, float squashDuration, float recoverDuration)
+    {
+        if (_visualTransform == null) return;
+
+        if (_squashRoutine != null)
+            StopCoroutine(_squashRoutine);
+        
+        _squashRoutine = StartCoroutine(WallSquashRoutine(squashXMultiplier, squashDuration, recoverDuration));
+    }
+
+    private IEnumerator WallSquashRoutine(float squashXMultiplier, float squashDuration, float recoverDuration)
+    {
+        Vector3 initialScale = _visualTransform.localScale;
+
+        float strechY = 1.0f + ((1.0f - squashXMultiplier) * 0.45f);
+        Vector3 squashScale = new Vector3(_originalScale.x * squashXMultiplier, _originalScale.y * strechY, _originalScale.z);
+
+        float elapsed = 0f;
+        while (elapsed < squashDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / squashDuration);
+            _visualTransform.localScale = Vector3.Lerp(initialScale, squashScale, t);
+            yield return null;
+        }
+        
+        _visualTransform.localScale = squashScale;
+
+        elapsed = 0f;
+        while (elapsed < recoverDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / recoverDuration);
+            _visualTransform.localScale = Vector3.Lerp(squashScale, _originalScale, t);
+            yield return null;
+        }
+
+        RestoreOriginalScale();
+        _squashRoutine = null;
+    }
+
     private void RestoreOriginalScale()
     {
         if (_visualTransform != null && _originalScale != Vector3.zero)

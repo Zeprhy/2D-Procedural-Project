@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5329088243806444860}
   - component: {fileID: 6689794220018619315}
   - component: {fileID: 510632423918240436}
+  - component: {fileID: 8991352937270247875}
   m_Layer: 12
   m_Name: Dummy
   m_TagString: Untagged
@@ -81,8 +82,41 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 4
+--- !u!114 &8991352937270247875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1487753632079592930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bdad230598c278240b53baf1ffbcc57d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WallCollisionReaction2D
+  _wallLayer:
+    serializedVersion: 2
+    m_Bits: 1048576
+  _minImpactSpeed: 4.5
+  _minWallNormalX: 0.65
+  _reboundStrength: 0.65
+  _tangentialDamping: 0.75
+  _useUpwardLift: 1
+  _upwardLift: 2
+  _reboundCooldown: 0.25
+  _triggerVisualSquash: 1
+  _wallSquashXMultiplier: 0.75
+  _wallSquashDuration: 0.04
+  _wallRecoverDuration: 0.1
+  _vfxPrefab: {fileID: 8866033358160712028, guid: 10f6e636800f93644a99920d6b1f13ba, type: 3}
+  _wallImpactSprites:
+  - {fileID: -746669217899799131, guid: bde271a6ba95a9c49a95d6eb0159b146, type: 3}
+  _vfxScale: {x: 1.2, y: 1.2, z: 1}
+  _vfxLifetime: 0.08
+  _sortingLayerName: Default
+  _sortingOrder: 100
 --- !u!1 &4935804121130318076
 GameObject:
   m_ObjectHideFlags: 0

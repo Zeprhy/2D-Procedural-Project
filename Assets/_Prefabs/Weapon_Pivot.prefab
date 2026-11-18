@@ -156,6 +156,7 @@ Transform:
   m_Children:
   - {fileID: 1117130067218123304}
   - {fileID: 6142724798338371945}
+  - {fileID: 5520168608187157376}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 40.457}
 --- !u!60 &961978717052433269
@@ -254,7 +255,13 @@ MonoBehaviour:
   _hitStopTimeScale: 0
   _normalHitStopDuration: 0.035
   _criticalHitStopDuration: 0.09
-  _criticalSwingThreshold: 250
+  _weaponTip: {fileID: 5520168608187157376}
+  _maxTrajectorySamples: 5
+  _maxSampleTimeWindow: 0.08
+  _minSwingSpeedThreshold: 9
+  _minDownwardSpeed: 4
+  _maxDownwardAngleDeviation: 55
+  _headZoneRatio: 0.3
   _criticalMultiplier: 1.5
   _baseKnockbackForce: 7
   _knockbackUpwardLift: 2.5
@@ -283,8 +290,40 @@ MonoBehaviour:
   _normalScale: {x: 1, y: 1, z: 1}
   _normalLifetime: 0.07
   _normalOffset: {x: 0, y: 0}
-  _criticalHitSprites: []
+  _criticalHitSprites:
+  - {fileID: 21300000, guid: 1e1d3e47940ab3e4b934513a227bcd4d, type: 3}
   _criticalScale: {x: 1.5, y: 1.5, z: 1}
   _criticalLifetime: 0.11
   _criticalOffset: {x: 0, y: 0}
   _randomizeCriticalRotation: 1
+--- !u!1 &8529619113551375633
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5520168608187157376}
+  m_Layer: 9
+  m_Name: Weapon_Tip
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5520168608187157376
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8529619113551375633}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.7659, y: 1.2845, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4040376587960482514}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
