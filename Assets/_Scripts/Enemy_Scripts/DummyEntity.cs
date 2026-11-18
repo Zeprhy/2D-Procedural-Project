@@ -8,18 +8,33 @@ public class DummyEntity : MonoBehaviour, IDamageable
     [Header("Data Entity (ScriptableObject)")]
     [SerializeField] private BaseEntitySO _entityData;
 
+    [Header("Referensi Visual")]
+    [Tooltip("Transform anak yang memegang SpriteRenderer. Jika kosong, akan mencari otomatis.")]
+    [SerializeField] private Transform _visualTransform;
+
     [Header("Juicy Effect: Hit Flash (URP)")]
     [Tooltip("Material yang menggunakan Shader Custom/URP2D_WhiteFlash")]
     [SerializeField] private Material _flashMaterial;
     [SerializeField] private float _flashDuration = 0.08f;
 
+    [Header("Juicy Effect: Squash & Stretch")]
+    [Tooltip("Pengali tinggi Y saat tertekan/terbentur (0.7 = memendek 30%)")]
+    [SerializeField] private float _squashYMultiplier = 0.72f;
+    [Tooltip("Pengali tinggi Y saat membal memanjang (1.18 = memanjang 18%)")]
+    [SerializeField] private float _stretchYMultiplier = 1.18f;
+    [SerializeField] private float _squashDuration = 0.04f;
+    [SerializeField] private float _stretchDuration = 0.07f;
+    [SerializeField] private float _recoverDuration = 0.10f;
+
     [Header("Fisika Reaksi (Knockback)")]
-    [SerializeField] private float _knockbackResistance = 0f; // 0 = Penuh, 1 = Kebal dorongan (Boss)
+    [SerializeField] private float _knockbackResistance = 0f;
 
     private float _currentHealth;
     private SpriteRenderer _spriteRenderer;
     private Material _originalMaterial;
+    private Vector3 _originalScale;
     private Coroutine _flashRoutine;
+    private Coroutine _squashRoutine;
     private Rigidbody2D _rb;
 
     private void Awake()
@@ -29,10 +44,14 @@ public class DummyEntity : MonoBehaviour, IDamageable
 
         _rb.freezeRotation = true;
 
+        if (_visualTransform == null && _spriteRenderer != null)
+            _visualTransform = _spriteRenderer.transform;
+
         if (_spriteRenderer != null)
-        {
             _originalMaterial = _spriteRenderer.sharedMaterial;
-        }
+
+        if (_visualTransform != null)
+            _originalScale = _visualTransform.localScale;
 
         if (_entityData != null)
             _currentHealth = _entityData.MaxHealth;
@@ -41,6 +60,7 @@ public class DummyEntity : MonoBehaviour, IDamageable
     private void OnDisable()
     {
         RestoreOriginalMaterial();
+        RestoreOriginalScale();
     }
 
     // Overload 1: Tanpa knockback 
@@ -51,6 +71,7 @@ public class DummyEntity : MonoBehaviour, IDamageable
     {
         ApplyKnockback(knockbackForce);
         TriggerHitFlash();
+        TriggerSquashAndStrecth();
 
         if (_entityData != null && _entityData.IsImmortal)
             return;
@@ -74,6 +95,7 @@ public class DummyEntity : MonoBehaviour, IDamageable
         _rb.AddForce(finalForce, ForceMode2D.Impulse);
     }
 
+    #region Hit Flash Logic
     private void TriggerHitFlash()
     {
         if (_spriteRenderer == null || _flashMaterial == null) return;
@@ -99,6 +121,69 @@ public class DummyEntity : MonoBehaviour, IDamageable
             _spriteRenderer.sharedMaterial = _originalMaterial;
         }
     }
+
+    #endregion
+
+    #region Squash & Stretch Logic
+
+    private void TriggerSquashAndStrecth()
+    {
+        if (_visualTransform == null) return;
+
+        if (_squashRoutine != null)
+            StopCoroutine(_squashRoutine);
+
+        _squashRoutine = StartCoroutine(SquashAndStretchRoutine());
+    }
+
+    private IEnumerator SquashAndStretchRoutine()
+    {
+        Vector3 initialScale = _visualTransform.localScale;
+
+        Vector3 SquashScale = new Vector3(_originalScale.x, _originalScale.y * _squashYMultiplier, _originalScale.z);
+        Vector3 StretchScale = new Vector3(_originalScale.x, _originalScale.y * _stretchYMultiplier, _originalScale.z);
+
+        float elapsed = 0f;
+        while (elapsed < _squashDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / _squashDuration);
+            _visualTransform.localScale = Vector3.Lerp(initialScale, SquashScale, t);
+            yield return null;
+        }
+
+        _visualTransform.localScale = SquashScale;
+
+        elapsed = 0f;
+        while (elapsed < _stretchDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / _stretchDuration);
+            _visualTransform.localScale = Vector3.Lerp(SquashScale, StretchScale, t);
+            yield return null;
+        }
+
+        _visualTransform.localScale = StretchScale;
+
+        elapsed = 0f;
+        while (elapsed < _recoverDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(elapsed / _recoverDuration));
+            _visualTransform.localScale = Vector3.Lerp(StretchScale, _originalScale, t);
+            yield return null;
+        }
+        
+        RestoreOriginalScale();
+        _squashRoutine = null;
+    }
+
+    private void RestoreOriginalScale()
+    {
+        if (_visualTransform != null && _originalScale != Vector3.zero)
+            _visualTransform.localScale = _originalScale;
+    }
+    #endregion
 
     private void Die()
     {
