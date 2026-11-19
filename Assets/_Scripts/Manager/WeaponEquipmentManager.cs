@@ -11,9 +11,23 @@ public class WeaponEquipmentManager : MonoBehaviour
     [Tooltip("WeaponLogic pedang yang sedang digunakan saat ini")]
     [SerializeField] private WeaponLogic _initialWeapon;
 
+    [Header("Pengaturan Drop")]
+    [Tooltip("Prefab PF_WorldItem yang akan dimunculkan di dunia saat senjata dijatuhkan")]
+    [SerializeField] private WorldItem _worldItemPrefab;
+    [Tooltip("Offset posisi spawn item relatif terhadap arah hadap pemain")]
+    [SerializeField] private Vector2 _dropOffset = new Vector2(0.5f, 0.3f);
+    [Tooltip("Dorongan fisik horizontal saat menjatuhkan senjata")]
+    [SerializeField] private float _dropImpulseX = 2.5f;
+    [Tooltip("Dorongan fisik vertikal ke atas saat menjatuhkan senjata")]
+    [SerializeField] private float _dropImpulseY = 2.0f;
+    [Tooltip("Referensi transform arah hadap karakter (misal GFX), fallback ke transform root jika kosong")]
+    [SerializeField] private Transform _facingReference;
+
     // Properti publik untuk status equipment
     public WeaponLogic CurrentWeapon { get; private set; }
+    public BaseWeaponSO CurrentWeaponData { get; private set; }
     public bool HasEquippedWeapon => CurrentWeapon != null;
+    
 
     private void Awake()
     {
@@ -81,7 +95,7 @@ public class WeaponEquipmentManager : MonoBehaviour
         }
     }
 
-    #region Loot Integration API (Stage 4 & Stage 4.5)
+    #region Loot Integration API 
 
     public bool CanEquip(BaseWeaponSO weaponData)
     {
@@ -123,7 +137,6 @@ public class WeaponEquipmentManager : MonoBehaviour
         GameObject weaponInstance = Instantiate(weaponData.WeaponPrefab, _rightHandHolder);
         weaponInstance.transform.localScale = Vector3.one;
 
-        // STAGE 4.5: Lakukan Grip Point Alignment sebelum mengikat logic
         AlignWeaponGrip(weaponInstance.transform, "Grip_Point_R");
 
         // 2. Dapatkan komponen WeaponLogic dari instance baru
@@ -146,6 +159,50 @@ public class WeaponEquipmentManager : MonoBehaviour
         Destroy(worldItem.gameObject);
 
         Debug.Log($"<color=green>[WeaponEquipmentManager]</color> Berhasil mengambil dan memasang '{weaponData.WeaponName}' dengan Grip Alignment!", this);
+        return true;
+    }
+
+    #endregion
+
+    #region Drop System AP
+    /// <summary>
+    /// Menjatuhkan senjata yang sedang aktif ke dunia game sebagai WorldItem
+    /// </summary>
+    public bool DropWeapon()
+    {
+        if (!HasEquippedWeapon)
+            return false;
+
+        BaseWeaponSO weaponData = CurrentWeaponData;
+        if (weaponData == null && CurrentWeapon != null)
+            weaponData = CurrentWeapon.WeaponData;
+
+        if (weaponData == null)
+            return false;
+
+        if (_worldItemPrefab == null)
+            return false;
+
+        float facingDir = _facingReference != null ? Mathf.Sign(_facingReference.lossyScale.x) : Mathf.Sign(transform.lossyScale.x);
+        Vector3 spawnPosition = transform.position + new Vector3(_dropOffset.x * facingDir, _dropOffset.y, 0f);
+
+        WorldItem droppedItem = Instantiate(_worldItemPrefab, spawnPosition, Quaternion.identity);
+        if (droppedItem == null)
+            return false;
+
+        droppedItem.Initialize(weaponData);
+
+        if (droppedItem.TryGetComponent<Rigidbody2D>(out var rb))
+        {
+            Vector2 dropImpulse = new Vector2 (facingDir * _dropImpulseX, _dropImpulseY);
+            rb.linearVelocity = Vector2.zero;
+            rb.AddForce(dropImpulse, ForceMode2D.Impulse);
+        }
+
+        GameObject weaponObjectToDestroy = CurrentWeapon.gameObject;
+        UnequipWeapon();
+        Destroy(weaponObjectToDestroy);
+        
         return true;
     }
 

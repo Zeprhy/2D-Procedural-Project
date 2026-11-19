@@ -1681,6 +1681,7 @@ MonoBehaviour:
   _scanInterval: 0.1
   _bufferCapacity: 8
   _interactKey: 101
+  _dropKey: 113
 --- !u!1 &1467204642
 GameObject:
   m_ObjectHideFlags: 0
@@ -2548,6 +2549,11 @@ MonoBehaviour:
   _rightHandController: {fileID: 761505123}
   _rightHandHolder: {fileID: 7469781702973571908}
   _initialWeapon: {fileID: 0}
+  _worldItemPrefab: {fileID: 798552166845835956, guid: 79f2adcc145c35d4c869dcb1d2cb8b0a, type: 3}
+  _dropOffset: {x: 0.5, y: 0.3}
+  _dropImpulseX: 2.5
+  _dropImpulseY: 2
+  _facingReference: {fileID: 7469781702054462226}
 --- !u!4 &7469781701598909632
 Transform:
   m_ObjectHideFlags: 0

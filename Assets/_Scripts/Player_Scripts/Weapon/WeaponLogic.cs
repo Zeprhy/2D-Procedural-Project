@@ -76,6 +76,8 @@ public class WeaponLogic : MonoBehaviour
     }
     private readonly Queue<TipSample> _trajectoryBuffer = new Queue<TipSample>();
 
+    public BaseWeaponSO WeaponData => _weaponData;
+
     private void Awake()
     {
         _hitbox = GetComponent<PolygonCollider2D>();

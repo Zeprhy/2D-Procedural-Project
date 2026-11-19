@@ -17,9 +17,11 @@ public class PlayerInteraction : MonoBehaviour
     [Tooltip("Kapasitas buffer array untuk pemindaian non-alloc")]
     [SerializeField] private int _bufferCapacity = 8;
 
-    [Header("Input Interaksi")]
+    [Header("Input Interaksi & Drop")]
     [Tooltip("Tombol keyboard untuk mengambil / berinteraksi dengan item")]
     [SerializeField] private KeyCode _interactKey = KeyCode.E;
+    [Tooltip("Tombol keyboard untuk menjatuhkan senjata yang sedang dipegang")]
+    [SerializeField] private KeyCode _dropKey = KeyCode.Q;
 
     private WorldItem _currentTarget;
     public WorldItem CurrentTarget => _currentTarget;
@@ -46,6 +48,9 @@ public class PlayerInteraction : MonoBehaviour
 
         if (Input.GetKeyDown(_interactKey))
             TryInteractWithTarget();
+
+        if (Input.GetKeyDown(_dropKey))
+            TryDropCurrentWeapon();
     }
 
     private void TryInteractWithTarget()
@@ -58,6 +63,16 @@ public class PlayerInteraction : MonoBehaviour
             if (success)
                 _currentTarget = null;
         }
+        else
+        {
+            Debug.LogWarning("<color=yellow>[PlayerInteraction]</color> Akses gagal: GameManager atau WeaponEquipmentManager tidak tersedia!", this);
+        }
+    }
+
+    private void TryDropCurrentWeapon()
+    {
+        if (GameManager.Instance != null && GameManager.Instance.WeaponEquipmentManager != null)
+            GameManager.Instance.WeaponEquipmentManager.DropWeapon();
         else
         {
             Debug.LogWarning("<color=yellow>[PlayerInteraction]</color> Akses gagal: GameManager atau WeaponEquipmentManager tidak tersedia!", this);
