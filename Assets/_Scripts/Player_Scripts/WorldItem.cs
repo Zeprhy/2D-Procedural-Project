@@ -12,6 +12,7 @@ public class WorldItem : MonoBehaviour
     [Header("Komponen Visual")]
     [SerializeField] private SpriteRenderer _spriteRenderer;
     public BaseWeaponSO ItemData => _itemData;
+    public bool IsConsumed {get; private set;}
 
     private void Awake()
     {
@@ -45,5 +46,12 @@ public class WorldItem : MonoBehaviour
                 Debug.LogWarning($"<color=yellow>[WorldItem]</color> Sprite untuk '{itemData.WeaponName}' belum diatur pada BaseWeaponSO!", this);
             }
         }
+    }
+
+    public void MarkAsConsumed()
+    {
+        IsConsumed = true;
+        if (TryGetComponent<Collider2D>(out var col))
+            col.enabled = false;
     }
 }

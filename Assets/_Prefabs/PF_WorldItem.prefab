@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 971410292051101715}
   - component: {fileID: 1469703310327105469}
   - component: {fileID: 2614362724102199626}
+  - component: {fileID: 798552166845835956}
   m_Layer: 8
   m_Name: PF_WorldItem
   m_TagString: Untagged
@@ -166,3 +167,17 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &798552166845835956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8509559519017699149}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b5da6a891313df4eaadd106426f9da8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WorldItem
+  _itemData: {fileID: 11400000, guid: cc185da694878734285c42f29bdf9512, type: 2}
+  _spriteRenderer: {fileID: 2614362724102199626}

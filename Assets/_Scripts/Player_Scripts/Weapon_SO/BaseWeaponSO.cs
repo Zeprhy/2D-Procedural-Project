@@ -21,6 +21,7 @@ public abstract class BaseWeaponSO : ScriptableObject
     [Tooltip("Sprite khusus saat senjata tergeletak di tanah (jika kosong, otomatis fallback ke WeaponIcon)")]
     [SerializeField] private Sprite _worldItemSprite;
 
+    // Public Getters (Preserving Existing Serialized Data)
     public string WeaponID => _weaponID;
     public string WeaponName => _weaponName;
     public Sprite WeaponIcon => _weaponIcon;

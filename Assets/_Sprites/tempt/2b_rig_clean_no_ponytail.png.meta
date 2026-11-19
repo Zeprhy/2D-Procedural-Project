@@ -1,0 +1,403 @@
+fileFormatVersion: 2
+guid: d0ea3755daad9d9478405074e293cad6
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -9145887864743169331
+    second: 2b_rig_clean_no_ponytail_0
+  - first:
+      213: 921129567644631505
+    second: 2b_rig_clean_no_ponytail_1
+  - first:
+      213: -1383054876072095273
+    second: 2b_rig_clean_no_ponytail_2
+  - first:
+      213: -4916810884982003699
+    second: 2b_rig_clean_no_ponytail_3
+  - first:
+      213: -3391109916328965840
+    second: 2b_rig_clean_no_ponytail_4
+  - first:
+      213: -6986105054975562532
+    second: 2b_rig_clean_no_ponytail_5
+  - first:
+      213: 5944198312684077186
+    second: 2b_rig_clean_no_ponytail_6
+  - first:
+      213: -1434534118588273420
+    second: 2b_rig_clean_no_ponytail_7
+  - first:
+      213: 7962111064997022359
+    second: 2b_rig_clean_no_ponytail_8
+  - first:
+      213: 8481637159104650473
+    second: 2b_rig_clean_no_ponytail_9
+  - first:
+      213: 9107674348723859540
+    second: 2b_rig_clean_no_ponytail_10
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_0
+      rect:
+        serializedVersion: 2
+        x: 130
+        y: 728
+        width: 326
+        height: 239
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dc27d6aa177431180800000000000000
+      internalID: -9145887864743169331
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_1
+      rect:
+        serializedVersion: 2
+        x: 145
+        y: 965
+        width: 295
+        height: 255
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1d1419f167288cc00800000000000000
+      internalID: 921129567644631505
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_2
+      rect:
+        serializedVersion: 2
+        x: 577
+        y: 807
+        width: 205
+        height: 383
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7d1d9defae66ecce0800000000000000
+      internalID: -1383054876072095273
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_3
+      rect:
+        serializedVersion: 2
+        x: 770
+        y: 660
+        width: 183
+        height: 327
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d08afdcec8af3cbb0800000000000000
+      internalID: -4916810884982003699
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_4
+      rect:
+        serializedVersion: 2
+        x: 1131
+        y: 88
+        width: 789
+        height: 1087
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 03948ea7f7b50f0d0800000000000000
+      internalID: -3391109916328965840
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_5
+      rect:
+        serializedVersion: 2
+        x: 201
+        y: 559
+        width: 193
+        height: 166
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cdcee9a677e5c0f90800000000000000
+      internalID: -6986105054975562532
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_6
+      rect:
+        serializedVersion: 2
+        x: 469
+        y: 551
+        width: 665
+        height: 92
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 280c2062fd80e7250800000000000000
+      internalID: 5944198312684077186
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_7
+      rect:
+        serializedVersion: 2
+        x: 174
+        y: 40
+        width: 344
+        height: 254
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4fc2e53d1d2871ce0800000000000000
+      internalID: -1434534118588273420
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_8
+      rect:
+        serializedVersion: 2
+        x: 182
+        y: 274
+        width: 344
+        height: 253
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 79aca5b14d91f7e60800000000000000
+      internalID: 7962111064997022359
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_9
+      rect:
+        serializedVersion: 2
+        x: 606
+        y: 86
+        width: 137
+        height: 433
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9ec9f2efe04d4b570800000000000000
+      internalID: 8481637159104650473
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: 2b_rig_clean_no_ponytail_10
+      rect:
+        serializedVersion: 2
+        x: 820
+        y: 93
+        width: 164
+        height: 355
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4507f9dc095f46e70800000000000000
+      internalID: 9107674348723859540
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      2b_rig_clean_no_ponytail_0: -9145887864743169331
+      2b_rig_clean_no_ponytail_1: 921129567644631505
+      2b_rig_clean_no_ponytail_10: 9107674348723859540
+      2b_rig_clean_no_ponytail_2: -1383054876072095273
+      2b_rig_clean_no_ponytail_3: -4916810884982003699
+      2b_rig_clean_no_ponytail_4: -3391109916328965840
+      2b_rig_clean_no_ponytail_5: -6986105054975562532
+      2b_rig_clean_no_ponytail_6: 5944198312684077186
+      2b_rig_clean_no_ponytail_7: -1434534118588273420
+      2b_rig_clean_no_ponytail_8: 7962111064997022359
+      2b_rig_clean_no_ponytail_9: 8481637159104650473
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
