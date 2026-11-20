@@ -135,7 +135,7 @@ GameObject:
   - component: {fileID: 3701375873531461409}
   - component: {fileID: 3898418053216416077}
   m_Layer: 9
-  m_Name: Weapon_Pivot
+  m_Name: Weapon_Melee
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

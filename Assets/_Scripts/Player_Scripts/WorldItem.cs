@@ -26,10 +26,7 @@ public class WorldItem : MonoBehaviour
     public void Initialize(BaseWeaponSO itemData)
     {
         if (itemData == null)
-        {
-            Debug.LogWarning($"<color=yellow>[WorldItem]</color> Mencoba menginisialisasi WorldItem di '{gameObject.name}' dengan data null!", this);
             return;
-        }
         
         _itemData = itemData;
 
@@ -41,10 +38,6 @@ public class WorldItem : MonoBehaviour
             Sprite displaySprite = itemData.WorldItemSprite;
             if (displaySprite != null)
                 _spriteRenderer.sprite = displaySprite;
-            else    
-            {
-                Debug.LogWarning($"<color=yellow>[WorldItem]</color> Sprite untuk '{itemData.WeaponName}' belum diatur pada BaseWeaponSO!", this);
-            }
         }
     }
 

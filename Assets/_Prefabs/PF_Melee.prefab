@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 2614362724102199626}
   - component: {fileID: 798552166845835956}
   m_Layer: 8
-  m_Name: PF_WorldItem
+  m_Name: PF_Melee
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

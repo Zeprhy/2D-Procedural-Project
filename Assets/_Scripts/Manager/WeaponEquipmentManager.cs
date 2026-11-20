@@ -12,6 +12,10 @@ public class WeaponEquipmentManager : MonoBehaviour
     [Tooltip("Titik pasang visual senjata kiri (B_L_Hand -> Item_Holder_L)")]
     [SerializeField] private Transform _leftHandHolder;
 
+    [Header("Sistem Senjata Api / Energy Core (Stage 6.2)")]
+    [Tooltip("Komponen pengelola resource bersama Dual Pistol")]
+    [SerializeField] private GunEnergyCore _energyCore;
+
     [Header("Senjata Awal (Eksisting / Default)")]
     [Tooltip("WeaponLogic pedang yang sedang digunakan saat ini")]
     [SerializeField] private WeaponLogic _initialWeapon;
@@ -43,6 +47,9 @@ public class WeaponEquipmentManager : MonoBehaviour
 
         if (_facingReference == null)
             _facingReference = transform;
+
+        if (_energyCore == null)
+            _energyCore = GetComponent<GunEnergyCore>();
     }
 
     private void OnEnable()
