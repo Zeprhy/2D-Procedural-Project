@@ -30,6 +30,15 @@ public class OffHandController2D : MonoBehaviour
     [SerializeField] private float _springStiffness = 140f;
     [SerializeField] private float _springDamping = 14f;
 
+    [Header("Inersia Idle (Biar Nggak Kaku)")]
+    [SerializeField] private float _idleSmoothTime = 0.10f;
+    [SerializeField] private float _idleSwayStiffness = 60f;
+    [SerializeField] private float _idleSwayDamping = 8f;
+    [SerializeField] private float _idleSwayInfluence = 4f;
+    [SerializeField] private float _idleMaxSway = 20f;
+
+    private Vector3 _prevShoulderPos;
+    private float _idleSway, _idleSwayVel;
     private float _currentReach = 0.35f;
     private float _reachVelocity;
     private Vector3 _currentTargetPos;
@@ -43,12 +52,16 @@ public class OffHandController2D : MonoBehaviour
     {
         if (_aimTracker == null) _aimTracker = GetComponent<PlayerAimTracker2D>();
         if (_lHandTarget != null) _currentTargetPos = _lHandTarget.position;
+        if (_leftShoulderPivot != null) _prevShoulderPos = _leftShoulderPivot.position;
     }
 
     private void LateUpdate()
     {
         if (_aimTracker == null || _leftShoulderPivot == null || _lHandTarget == null) return;
         float facingDir = _gfxTransform != null ? Mathf.Sign(_gfxTransform.localScale.x) : 1f;
+        Vector3 shoulderPos = _leftShoulderPivot.position;
+        Vector3 shoulderVel = (shoulderPos - _prevShoulderPos) / Mathf.Max(Time.deltaTime, 0.0001f);
+        _prevShoulderPos = shoulderPos;
 
         if (_aimTracker.IsAimingLeft)
         {
@@ -76,16 +89,22 @@ public class OffHandController2D : MonoBehaviour
             Quaternion handRotation = Quaternion.Euler(0f, 0f, worldAimAngle + (facingDir * _handAngleOffset));
             if (_lHandBone != null) _lHandBone.rotation = handRotation;
         }
-        else 
+        else
         {
-            Vector3 restPos = _leftShoulderPivot.position + new Vector3(_idleOffset.x * facingDir, _idleOffset.y, 0f);
-            _currentTargetPos = Vector3.Lerp(_currentTargetPos, restPos, Time.deltaTime * 10f);
+            float swayTarget = Mathf.Clamp(-shoulderVel.x * _idleSwayInfluence * facingDir, -_idleMaxSway, _idleMaxSway);
+            _idleSwayVel += (swayTarget - _idleSway) * _idleSwayStiffness * Time.deltaTime;
+            _idleSwayVel *= Mathf.Max(0f, 1f - _idleSwayDamping * Time.deltaTime);
+            _idleSway += _idleSwayVel * Time.deltaTime;
+
+            Vector3 restPos = shoulderPos + new Vector3(_idleOffset.x * facingDir, _idleOffset.y, 0f);
+            restPos += new Vector3(-shoulderVel.x * 0.02f, -shoulderVel.y * 0.01f, 0f);
+            _currentTargetPos = Vector3.SmoothDamp(_currentTargetPos, restPos, ref _handVelocity, _idleSmoothTime);
             _lHandTarget.position = _currentTargetPos;
 
-            Quaternion restRotation = Quaternion.Euler(0f, 0f, -90f * facingDir);
+            float angle = (-90f + _idleSway) * facingDir;
             if (_lHandBone != null)
-                _lHandBone.rotation = Quaternion.Slerp(_lHandBone.rotation, restRotation, Time.deltaTime * 10f);
-                
+                _lHandBone.rotation = Quaternion.Slerp(_lHandBone.rotation, Quaternion.Euler(0f, 0f, angle),
+                    1f - Mathf.Exp(-10f * Time.deltaTime));
             _currentReach = _minReach;
         }
     }

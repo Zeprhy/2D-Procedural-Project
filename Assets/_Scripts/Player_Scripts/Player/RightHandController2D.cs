@@ -34,6 +34,15 @@ public class RightHandController2D : MonoBehaviour
     [SerializeField] private float _springDamping = 14f;
     [SerializeField] private float _aimLagTime = 0.12f;
 
+    [Header("Inersia Idle (Biar Nggak Kaku)")]
+    [SerializeField] private float _idleSmoothTime = 0.10f;
+    [SerializeField] private float _idleSwayStiffness = 60f;
+    [SerializeField] private float _idleSwayDamping = 8f;
+    [SerializeField] private float _idleSwayInfluence = 4f;
+    [SerializeField] private float _idleMaxSway = 20f;
+
+    private Vector3 _prevShoulderPos;
+    private float _idleSway, _idleSwayVel;
     private float _currentSpringReach = 0.35f;
     private float _reachVelocity;
     private Vector3 _currentHandTargetPos;
@@ -48,6 +57,7 @@ public class RightHandController2D : MonoBehaviour
     {
         if (_aimTracker == null) _aimTracker = GetComponent<PlayerAimTracker2D>();
         if (_rHandTarget != null) _currentHandTargetPos = _rHandTarget.position;
+        if (_rightShoulderPivot != null) _prevShoulderPos = _rightShoulderPivot.position;
     }
 
     private void LateUpdate()
@@ -55,6 +65,9 @@ public class RightHandController2D : MonoBehaviour
         if (_aimTracker == null || _rightShoulderPivot == null || _rHandTarget == null) return;
 
         float facingDir = _gfxTransform != null ? Mathf.Sign(_gfxTransform.localScale.x) : 1f;
+        Vector3 shoulderPos = _rightShoulderPivot.position;
+        Vector3 shoulderVel = (shoulderPos - _prevShoulderPos) / Mathf.Max(Time.deltaTime, 0.0001f);
+        _prevShoulderPos = shoulderPos;
 
         if (_aimTracker.IsAimingRight)
         {
@@ -93,15 +106,22 @@ public class RightHandController2D : MonoBehaviour
         }
         else
         {
-            // Tangan kanan dan pedang turun santai di samping paha
-            Vector3 restPos = _rightShoulderPivot.position + new Vector3(_swordRestOffset.x * facingDir, _swordRestOffset.y, 0f);
-            _currentHandTargetPos = Vector3.Lerp(_currentHandTargetPos, restPos, Time.deltaTime * 8f);
+            // senjata telat saat akselerasi, ngayun saat berhenti
+            float swayTarget = Mathf.Clamp(-shoulderVel.x * _idleSwayInfluence * facingDir, -_idleMaxSway, _idleMaxSway);
+            _idleSwayVel += (swayTarget - _idleSway) * _idleSwayStiffness * Time.deltaTime;
+            _idleSwayVel *= Mathf.Max(0f, 1f - _idleSwayDamping * Time.deltaTime);
+            _idleSway += _idleSwayVel * Time.deltaTime;
+
+            Vector3 restPos = shoulderPos + new Vector3(_swordRestOffset.x * facingDir, _swordRestOffset.y, 0f);
+            restPos += new Vector3(-shoulderVel.x * 0.02f, -shoulderVel.y * 0.01f, 0f);
+            _currentHandTargetPos = Vector3.SmoothDamp(_currentHandTargetPos, restPos, ref _handVelocity, _idleSmoothTime);
             _rHandTarget.position = _currentHandTargetPos;
 
-            // Sudut pedang miring santai mengarah ke bawah tanah
-            Quaternion restRotation = Quaternion.Euler(0f, 0f, _swordRestAngle * facingDir);
-            if (_rHandBone != null) _rHandBone.rotation = Quaternion.Slerp(_rHandBone.rotation, restRotation, Time.deltaTime * 8f);
-
+            float angle = (_swordRestAngle + _idleSway) * facingDir;
+            if (_rHandBone != null)
+                _rHandBone.rotation = Quaternion.Slerp(_rHandBone.rotation, Quaternion.Euler(0f, 0f, angle),
+                    1f - Mathf.Exp(-10f * Time.deltaTime));
+                    
             _currentSpringReach = _minReach;
         }
     }
