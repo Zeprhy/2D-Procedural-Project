@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4955032611655757410
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2365298232409543093}
+  m_Layer: 9
+  m_Name: Grip_Point_L
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2365298232409543093
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4955032611655757410}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.45, y: -0.143, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 9168162035922760408}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &5127796580653828106
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -66,7 +97,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4040376587960482514, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.93832123
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4040376587960482514, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
       propertyPath: m_LocalRotation.x
@@ -78,7 +109,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4040376587960482514, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.345765
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4040376587960482514, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -90,7 +121,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4040376587960482514, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 40.457
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4040376587960482514, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
       propertyPath: m_ConstrainProportionsScale
@@ -124,7 +155,10 @@ PrefabInstance:
     - {fileID: 3898418053216416077, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
     - {fileID: 961978717052433269, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 4040376587960482514, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
+      insertIndex: 2
+      addedObject: {fileID: 2365298232409543093}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 6231095779114141848, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
       insertIndex: -1
@@ -162,6 +196,7 @@ MonoBehaviour:
   _vfxController: {fileID: 8391466616086247211}
   _damageTextPrefab: {fileID: 6164039436554372379, guid: 70aa6f87fc8f2794eab96c01cd910dbd, type: 3}
   _firePoint: {fileID: 842740239831630730}
+  _energyCore: {fileID: 0}
 --- !u!60 &6305326913625075491
 PolygonCollider2D:
   m_ObjectHideFlags: 0
@@ -228,3 +263,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cd477aa8b3d6f0d48b2e12ca0b00c78f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CombatVFXController
+--- !u!4 &9168162035922760408 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4040376587960482514, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
+  m_PrefabInstance: {fileID: 5127796580653828106}
+  m_PrefabAsset: {fileID: 0}

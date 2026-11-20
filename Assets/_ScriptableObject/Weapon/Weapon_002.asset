@@ -23,6 +23,15 @@ MonoBehaviour:
   _worldItemSprite: {fileID: 0}
   _damagePerShot: 18
   _fireRate: 0.25
-  _magazineCapacity: 12
-  _reloadDuration: 1.2
-  _projectilePrefab: {fileID: 0}
+  _projectileSpeed: 22
+  _projectileLifetime: 2.5
+  _maxBattery: 100
+  _batteryCostPerShot: 10
+  _batteryRegenRate: 25
+  _maxHeat: 100
+  _heatPerShot: 15
+  _heatDissipationRate: 20
+  _idleDelay: 1.75
+  _overheatCooldown: 2.5
+  _overheatRecoveryRatio: 0.4
+  _projectilePrefab: {fileID: 9102070951830155043, guid: 347d28477b1d0e145a5f8823b90cc682, type: 3}
