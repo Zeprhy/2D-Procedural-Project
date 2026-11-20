@@ -7,7 +7,7 @@ public class WeaponEquipmentManager : MonoBehaviour
     [Tooltip("Titik pasang visual senjata kanan (B_R_Hand -> Item_Holder_R)")]
     [SerializeField] private Transform _rightHandHolder;
 
-    [Header("Referensi Tangan Kiri / Off-Hand ")]
+    [Header("Referensi Tangan Kiri / Off-Hand (Stage 6.1)")]
     [SerializeField] private OffHandController2D _offHandController;
     [Tooltip("Titik pasang visual senjata kiri (B_L_Hand -> Item_Holder_L)")]
     [SerializeField] private Transform _leftHandHolder;
@@ -32,7 +32,6 @@ public class WeaponEquipmentManager : MonoBehaviour
     public WeaponLogic CurrentWeapon { get; private set; }
     public BaseWeaponSO CurrentWeaponData { get; private set; }
     public bool HasEquippedWeapon => CurrentWeapon != null;
-    
 
     private void Awake()
     {
@@ -69,7 +68,6 @@ public class WeaponEquipmentManager : MonoBehaviour
             GameManager.Instance.RegisterWeaponEquipmentManager(this);
         }
 
-        // Transisi aman: pasang pedang awal ke RightHandController
         if (_initialWeapon != null)
         {
             EquipExistingWeapon(_initialWeapon);
@@ -83,8 +81,8 @@ public class WeaponEquipmentManager : MonoBehaviour
     public void EquipExistingWeapon(WeaponLogic weapon)
     {
         CurrentWeapon = weapon;
+        CurrentWeaponData = (weapon != null) ? weapon.WeaponData : null;
 
-        // Pastikan senjata awal yang terpasang di holder juga mendapatkan grip alignment
         if (_rightHandHolder != null && weapon != null && weapon.transform.IsChildOf(_rightHandHolder))
         {
             AlignWeaponGrip(weapon.transform, "Grip_Point_R");
@@ -99,6 +97,7 @@ public class WeaponEquipmentManager : MonoBehaviour
     public void UnequipWeapon()
     {
         CurrentWeapon = null;
+        CurrentWeaponData = null;
 
         if (_rightHandController != null)
         {
@@ -106,7 +105,7 @@ public class WeaponEquipmentManager : MonoBehaviour
         }
     }
 
-    #region Loot Integration API 
+    #region Loot Integration API (Stage 4 & 4.5)
 
     public bool CanEquip(BaseWeaponSO weaponData)
     {
@@ -124,7 +123,7 @@ public class WeaponEquipmentManager : MonoBehaviour
 
         if (HasEquippedWeapon)
         {
-            Debug.Log($"<color=white>[WeaponEquipmentManager]</color> Tangan kanan sudah terisi oleh '{CurrentWeapon.name}'. Lepaskan (Drop) terlebih dahulu sebelum mengambil senjata baru.", this);
+            Debug.Log($"<color=white>[WeaponEquipmentManager]</color> Tangan kanan sudah terisi oleh '{CurrentWeapon.name}'. Tekan 'Q' untuk Drop terlebih dahulu.", this);
             return false;
         }
 
@@ -144,13 +143,14 @@ public class WeaponEquipmentManager : MonoBehaviour
             return false;
         }
 
-        // 1. Instansiasi WeaponPrefab sebagai anak langsung dari Item_Holder_R
+        // 1. Instansiasi WeaponPrefab ke dalam Item_Holder_R
         GameObject weaponInstance = Instantiate(weaponData.WeaponPrefab, _rightHandHolder);
         weaponInstance.transform.localScale = Vector3.one;
 
+        // 2. Alignment Grip Point presisi
         AlignWeaponGrip(weaponInstance.transform, "Grip_Point_R");
 
-        // 2. Dapatkan komponen WeaponLogic dari instance baru
+        // 3. Dapatkan WeaponLogic
         WeaponLogic newWeaponLogic = weaponInstance.GetComponent<WeaponLogic>();
         if (newWeaponLogic == null)
             newWeaponLogic = weaponInstance.GetComponentInChildren<WeaponLogic>();
@@ -162,50 +162,62 @@ public class WeaponEquipmentManager : MonoBehaviour
             return false;
         }
 
-        // 3. Pasang senjata ke controller tangan kanan
+        // 4. Pasang ke tangan
         EquipExistingWeapon(newWeaponLogic);
 
-        // 4. Tandai item dunia telah dikonsumsi dan hancurkan dari scene
+        // 5. Konsumsi dan hancurkan objek WorldItem di lantai
         worldItem.MarkAsConsumed();
         Destroy(worldItem.gameObject);
 
-        Debug.Log($"<color=green>[WeaponEquipmentManager]</color> Berhasil mengambil dan memasang '{weaponData.WeaponName}' dengan Grip Alignment!", this);
+        Debug.Log($"<color=green>[WeaponEquipmentManager]</color> Berhasil mengambil '{weaponData.WeaponName}'!", this);
         return true;
     }
 
     #endregion
 
-    #region Drop System AP
-    /// <summary>
-    /// Menjatuhkan senjata yang sedang aktif ke dunia game sebagai WorldItem
-    /// </summary>
+    #region Drop System API (Stage 5)
+
     public bool DropWeapon()
     {
         if (!HasEquippedWeapon)
+        {
+            Debug.Log("<color=white>[WeaponEquipmentManager]</color> Tidak ada senjata yang sedang dipegang untuk dijatuhkan.", this);
             return false;
+        }
 
         BaseWeaponSO weaponData = CurrentWeaponData;
         if (weaponData == null && CurrentWeapon != null)
+        {
             weaponData = CurrentWeapon.WeaponData;
+        }
 
         if (weaponData == null)
+        {
+            Debug.LogError("<color=red>[WeaponEquipmentManager]</color> Drop gagal: Senjata aktif tidak memiliki referensi BaseWeaponSO! Senjata tidak akan dihapus demi keamanan.", this);
             return false;
+        }
 
         if (_worldItemPrefab == null)
+        {
+            Debug.LogError("<color=red>[WeaponEquipmentManager]</color> Drop gagal: '_worldItemPrefab' belum di-assign pada Inspector WeaponEquipmentManager! Senjata tidak akan dihapus.", this);
             return false;
+        }
 
         float facingDir = _facingReference != null ? Mathf.Sign(_facingReference.lossyScale.x) : Mathf.Sign(transform.lossyScale.x);
         Vector3 spawnPosition = transform.position + new Vector3(_dropOffset.x * facingDir, _dropOffset.y, 0f);
 
         WorldItem droppedItem = Instantiate(_worldItemPrefab, spawnPosition, Quaternion.identity);
         if (droppedItem == null)
+        {
+            Debug.LogError("<color=red>[WeaponEquipmentManager]</color> Drop gagal: Gagal menginstansiasi WorldItem prefab!", this);
             return false;
+        }
 
         droppedItem.Initialize(weaponData);
 
         if (droppedItem.TryGetComponent<Rigidbody2D>(out var rb))
         {
-            Vector2 dropImpulse = new Vector2 (facingDir * _dropImpulseX, _dropImpulseY);
+            Vector2 dropImpulse = new Vector2(facingDir * _dropImpulseX, _dropImpulseY);
             rb.linearVelocity = Vector2.zero;
             rb.AddForce(dropImpulse, ForceMode2D.Impulse);
         }
@@ -213,51 +225,41 @@ public class WeaponEquipmentManager : MonoBehaviour
         GameObject weaponObjectToDestroy = CurrentWeapon.gameObject;
         UnequipWeapon();
         Destroy(weaponObjectToDestroy);
-        
+
+        Debug.Log($"<color=cyan>[WeaponEquipmentManager]</color> Berhasil menjatuhkan '{weaponData.WeaponName}' ke dunia!", this);
         return true;
     }
 
     #endregion
 
-    #region Grip Point Alignment Logic (Stage 4.5)
+    #region Grip Point Alignment Logic
 
-    /// <summary>
-    /// Menyelaraskan posisi dan rotasi root senjata agar Grip Point tepat berimpit dengan holder tangan
-    /// </summary>
     private void AlignWeaponGrip(Transform weaponRoot, string gripName)
     {
         Transform gripPoint = FindGripPoint(weaponRoot, gripName);
 
         if (gripPoint != null)
         {
-            // 1. Hitung rotasi lokal terbalik dari Grip Point
             Quaternion gripLocalRot = gripPoint.localRotation;
             Quaternion inverseGripRot = Quaternion.Inverse(gripLocalRot);
             weaponRoot.localRotation = inverseGripRot;
 
-            // 2. Geser root senjata agar posisi Grip Point tepat berada di (0, 0, 0) holder
             Vector3 gripLocalPos = gripPoint.localPosition;
             weaponRoot.localPosition = -(inverseGripRot * gripLocalPos);
         }
         else
         {
-            // FALLBACK: Jika Grip Point tidak ditemukan, gunakan pivot default (0,0,0)
             Debug.LogWarning($"<color=yellow>[WeaponEquipmentManager]</color> Grip Point '{gripName}' tidak ditemukan pada '{weaponRoot.name}'. Menggunakan fallback pivot default.", this);
             weaponRoot.localPosition = Vector3.zero;
             weaponRoot.localRotation = Quaternion.identity;
         }
     }
 
-    /// <summary>
-    /// Mencari Transform Grip Point di dalam hierarki prefab senjata
-    /// </summary>
     private Transform FindGripPoint(Transform weaponRoot, string gripName)
     {
-        // Cari child langsung terlebih dahulu (O(1) search)
         Transform directChild = weaponRoot.Find(gripName);
         if (directChild != null) return directChild;
 
-        // Fallback pencarian rekursif jika Grip Point diletakkan di dalam sub-child
         Transform[] allChildren = weaponRoot.GetComponentsInChildren<Transform>();
         for (int i = 0; i < allChildren.Length; i++)
         {
