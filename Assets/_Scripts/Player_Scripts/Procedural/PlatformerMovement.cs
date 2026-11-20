@@ -31,12 +31,23 @@ public class PlatformerMovement : MonoBehaviour
     [SerializeField] private float _stepHeight = 0.5f;
     [SerializeField] private float _stepSearchDist = 0.45f;
     [SerializeField] private float _maxSlopeAngle = 45f;
+    [Tooltip("(C) Sudut minimum normal permukaan untuk dianggap RISER tangga. Normal riser hampir horizontal (~90); normal lereng menghadap atas (<45).")]
+    [SerializeField] private float _stairFaceMinAngle = 80f;
+
+    [Header("Sinkronisasi Animasi Prosedural")]
+    [Tooltip("(E) Ambang kecepatan untuk menganggap karakter masih bergerak walau input lepas.")]
+    [SerializeField] private float _stopVelocityThreshold = 0.15f;
+
+    [Tooltip("Akselerasi saat berbalik arah (velocity & input berlawanan). Lebih kecil = putaran lebih halus, menghilangkan rasa 'ketarik'.")]
+    [SerializeField] private float _reversalAcceleration = 15f;
 
     public Rigidbody2D PlayerRigidbody { get => _rigidbody; set => _rigidbody = value; }
     public float Speed { get => _speed; set => _speed = value; }
     public bool Freeze { get; set; }
     public bool IsGrounded => _isGrounded;
     public bool IsMoving => Mathf.Abs(_playerInput.InputX) > 0.1f;
+    // (E) property BARU; IsMoving lama tidak diubah agar konsumen lain aman
+    public bool IsMovingOrSliding => IsMoving || Mathf.Abs(_rigidbody.linearVelocity.x) > _stopVelocityThreshold;
 
     private bool _isGrounded;
     private bool _isClimbing;
@@ -51,9 +62,7 @@ public class PlatformerMovement : MonoBehaviour
     {
         if (_groundCheckPoint != null)
             _isGrounded = Physics2D.OverlapCircle(_groundCheckPoint.position, _groundCheckRadius, _groundLayer);
-
         if (Freeze) return;
-
         if (Input.GetButtonDown("Jump") && _isGrounded)
             _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, _jumpForce);
     }
@@ -61,28 +70,27 @@ public class PlatformerMovement : MonoBehaviour
     private void FixedUpdate()
     {
         if (Freeze) return;
-
-        // Deselerasi recoil menuju 0 secara halus
         _recoilVelocityX = Mathf.MoveTowards(_recoilVelocityX, 0f, _recoilDecayRate * Time.fixedDeltaTime);
-
-        // Karakter melambat 40% saat mendaki tangga
         float speedMultiplier = _isClimbing ? 0.6f : 1.0f;
         float targetSpeed = _playerInput.InputX * (_speed * speedMultiplier);
-
         float speedDiff = targetSpeed - _rigidbody.linearVelocity.x;
-        float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? _acceleration : _deceleration;
-        float movement = speedDiff * accelRate * Time.fixedDeltaTime;
 
-        // Gabungkan gerakan normal dengan sisa gaya recoil
+
+        bool reversing = Mathf.Abs(targetSpeed) > 0.01f
+            && Mathf.Abs(_rigidbody.linearVelocity.x) > 0.01f
+            && Mathf.Sign(targetSpeed) != Mathf.Sign(_rigidbody.linearVelocity.x);
+        float accelRate;
+        if (Mathf.Abs(targetSpeed) <= 0.01f) accelRate = _deceleration;
+        else if (reversing) accelRate = _reversalAcceleration;
+        else accelRate = _acceleration;
+
+        float movement = speedDiff * accelRate * Time.fixedDeltaTime;
         float finalVelX = _rigidbody.linearVelocity.x + movement + _recoilVelocityX;
         _rigidbody.linearVelocity = new Vector2(finalVelX, _rigidbody.linearVelocity.y);
-
         if (IsMoving && _isGrounded)
             HandleStepClimb();
         else
             _isClimbing = false;
-
-        // Gravitasi Lompat Responsif
         if (_rigidbody.linearVelocity.y < 0)
         {
             _rigidbody.linearVelocity += Vector2.up * (Physics2D.gravity.y * (_fallMultiplier - 1) * Time.fixedDeltaTime);
@@ -93,29 +101,26 @@ public class PlatformerMovement : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Menerima dorongan recoil sesaat (berlawanan arah serangan)
-    /// </summary>
-    /// // Arah recoil berlawanan dengan arah hit (-hitDirectionX)
-    public void ApplyMicroRecoil(float recoilForce, float hitDirectionX) => _recoilVelocityX = -hitDirectionX * recoilForce; 
+    public void ApplyMicroRecoil(float recoilForce, float hitDirectionX) => _recoilVelocityX = -hitDirectionX * recoilForce;
+
     private void HandleStepClimb()
     {
         float direction = Mathf.Sign(_playerInput.InputX);
         Vector2 originLower = new Vector2(transform.position.x + (direction * 0.15f), _groundCheckPoint.position.y + 0.08f);
         Vector2 originUpper = new Vector2(transform.position.x + (direction * 0.15f), _groundCheckPoint.position.y + _stepHeight);
-
         RaycastHit2D hitLower = Physics2D.Raycast(originLower, Vector2.right * direction, _stepSearchDist, _groundLayer);
         RaycastHit2D hitUpper = Physics2D.Raycast(originUpper, Vector2.right * direction, _stepSearchDist, _groundLayer);
-
         if (hitLower.collider != null && hitUpper.collider == null)
         {
-            float surfaceAngle = Vector2.Angle(hitLower.normal, Vector2.up);
-            if (surfaceAngle > _maxSlopeAngle && surfaceAngle < 85f)
+            // (C) FIX klasifikasi berbasis ORIENTASI NORMAL:
+            //  - Riser tangga / dinding: normal hampir horizontal -> faceAngle besar (~90).
+            //  - Lereng landai: normal menghadap atas -> faceAngle kecil (<= ~45).
+            float faceAngle = Vector2.Angle(hitLower.normal, Vector2.up);
+            if (faceAngle < _stairFaceMinAngle)
             {
-                _isClimbing = false;
+                _isClimbing = false;   // lereng, bukan tangga -> jangan injeksi posisi/velocity Y
                 return;
             }
-
             _isClimbing = true;
             _rigidbody.position += new Vector2(0f, 0.04f);
             _rigidbody.linearVelocity = new Vector2(_rigidbody.linearVelocity.x, 2.5f);
@@ -132,12 +137,10 @@ public class PlatformerMovement : MonoBehaviour
         {
             Gizmos.color = _isGrounded ? Color.green : Color.red;
             Gizmos.DrawWireSphere(_groundCheckPoint.position, _groundCheckRadius);
-
             Gizmos.color = Color.cyan;
             float dir = transform.localScale.x >= 0 ? 1f : -1f;
             Vector3 originLower = new Vector3(transform.position.x + (dir * 0.1f), _groundCheckPoint.position.y + 0.08f, 0f);
             Vector3 originUpper = new Vector3(transform.position.x + (dir * 0.1f), _groundCheckPoint.position.y + _stepHeight, 0f);
-
             Gizmos.DrawLine(originLower, originLower + Vector3.right * dir * _stepSearchDist);
             Gizmos.DrawLine(originUpper, originUpper + Vector3.right * dir * _stepSearchDist);
         }

@@ -106,14 +106,16 @@ public class RightHandController2D : MonoBehaviour
         }
         else
         {
-            // senjata telat saat akselerasi, ngayun saat berhenti
+            // Ayunan: tangan ketinggalan & mengayun lawan arah gerak, sesuai kecepatan player
             float swayTarget = Mathf.Clamp(-shoulderVel.x * _idleSwayInfluence * facingDir, -_idleMaxSway, _idleMaxSway);
             _idleSwayVel += (swayTarget - _idleSway) * _idleSwayStiffness * Time.deltaTime;
             _idleSwayVel *= Mathf.Max(0f, 1f - _idleSwayDamping * Time.deltaTime);
             _idleSway += _idleSwayVel * Time.deltaTime;
 
-            Vector3 restPos = shoulderPos + new Vector3(_swordRestOffset.x * facingDir, _swordRestOffset.y, 0f);
-            restPos += new Vector3(-shoulderVel.x * 0.02f, -shoulderVel.y * 0.01f, 0f);
+            Vector3 restPos = _rightShoulderPivot.position + new Vector3(_swordRestOffset.x * facingDir, _swordRestOffset.y, 0f);
+            // Lag posisi world-space: lari ke kanan -> tangan tertinggal ke kiri sedikit
+            restPos.x -= shoulderVel.x * 0.02f;
+            restPos.y -= shoulderVel.y * 0.01f;
             _currentHandTargetPos = Vector3.SmoothDamp(_currentHandTargetPos, restPos, ref _handVelocity, _idleSmoothTime);
             _rHandTarget.position = _currentHandTargetPos;
 
@@ -121,7 +123,6 @@ public class RightHandController2D : MonoBehaviour
             if (_rHandBone != null)
                 _rHandBone.rotation = Quaternion.Slerp(_rHandBone.rotation, Quaternion.Euler(0f, 0f, angle),
                     1f - Mathf.Exp(-10f * Time.deltaTime));
-                    
             _currentSpringReach = _minReach;
         }
     }

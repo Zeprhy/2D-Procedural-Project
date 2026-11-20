@@ -17,48 +17,72 @@ public class ProceduralBipedLeg2D : MonoBehaviour
     public float stepSpeed = 10f;
     public float footYOffset = 0.05f;
     public float maxSlopeAngle = 45f;
-
     public bool isMyTurn = true;
-    public bool IsStepping { get; private set; } = false;
+    
+    [Header("Pose Istirahat (Idle Stance)")]
+    [Tooltip("Jarak lateral tambahan dari footHome saat idle. Arah otomatis menjauh dari kaki lain (world-space, aman saat flip).")]
+    public float idleStanceWidth = 0.10f;
 
+    public bool IsStepping { get; private set; } = false;
     private Quaternion _targetRotation = Quaternion.identity;
+
+    // (F) smoothing frame-rate independent; rate 15 dipertahankan agar feel lama sama
+    private const float SmoothRate = 15f;
+    private static float ExpT(float dt) => 1f - Mathf.Exp(-SmoothRate * dt);
 
     private void Update()
     {
         if (footHome == null || movement == null) return;
 
-        // Kondisi di udara (Lompat / Jatuh)
-       if (!movement.IsGrounded)
+        // Kondisi di udara (Lompat / Jatuh) — perilaku lama dipertahankan
+        if (!movement.IsGrounded)
         {
             StopAllCoroutines();
             IsStepping = false;
-            transform.position = Vector3.Lerp(transform.position, footHome.position, Time.deltaTime * 15f);
-            transform.rotation = Quaternion.Slerp(transform.rotation, footHome.rotation, Time.deltaTime * 15f);
+            float t = ExpT(Time.deltaTime);
+            transform.position = Vector3.Lerp(transform.position, footHome.position, t);
+            transform.rotation = Quaternion.Slerp(transform.rotation, footHome.rotation, t);
             return;
         }
 
-        // Kondisi diam (Idle): kunci kaki ke tanah tepat di bawah footHome
-        if (!movement.IsMoving && !IsStepping)
+        // (E) gate idle memakai gerakan AKTUAL (input OR momentum), bukan input saja
+        bool actuallyMoving = movement.IsMovingOrSliding;
+
+        // Kondisi diam (Idle)
+        if (!actuallyMoving && !IsStepping)
         {
             SnapFootToGroundIdle();
+            // (A) FIX: rotasi telapak tetap diperbarui saat idle (sebelumnya return sebelum slerp)
+            transform.rotation = Quaternion.Slerp(transform.rotation, _targetRotation, ExpT(Time.deltaTime));
             return;
         }
 
-        transform.rotation = Quaternion.Slerp(transform.rotation, _targetRotation, Time.deltaTime * 15f);
+        transform.rotation = Quaternion.Slerp(transform.rotation, _targetRotation, ExpT(Time.deltaTime));
         if (IsStepping || !isMyTurn || (otherLeg != null && otherLeg.IsStepping)) return;
 
-        float moveDir = Input.GetAxisRaw("Horizontal");
-        float distToHome = Vector2.Distance(transform.position, footHome.position);
+        // (E) arah langkah: fallback ke sign velocity saat input lepas tapi masih momentum
+        float moveDir = Mathf.Sign(Input.GetAxisRaw("Horizontal"));
+        if (moveDir == 0f) moveDir = Mathf.Sign(movement.PlayerRigidbody.linearVelocity.x);
+        if (moveDir == 0f) return;
 
+        float distToHome = Vector2.Distance(transform.position, footHome.position);
         if (distToHome > stepDistance)
         {
-            StartCoroutine(PerformStep(Mathf.Sign(moveDir)));
+            StartCoroutine(PerformStep(moveDir));
         }
     }
 
     private void SnapFootToGroundIdle()
     {
-        RaycastHit2D hit = Physics2D.Raycast(footHome.position + Vector3.up * 0.5f, Vector2.down, 2.5f, groundLayer);
+        // Arah stance otomatis = menjauh dari kaki lain (world-space, aman saat flip kiri/kanan)
+        float stanceSign = (otherLeg != null && otherLeg.footHome != null)
+            ? Mathf.Sign(footHome.position.x - otherLeg.footHome.position.x)
+            : 0f;
+        if (stanceSign == 0f)
+            stanceSign = gameObject.name.StartsWith("L") ? -1f : 1f;
+
+        Vector3 probe = footHome.position + new Vector3(idleStanceWidth * stanceSign, 0.5f, 0f);
+        RaycastHit2D hit = Physics2D.Raycast(probe, Vector2.down, 2.5f, groundLayer);
         if (hit.collider != null)
         {
             float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
@@ -75,47 +99,46 @@ public class ProceduralBipedLeg2D : MonoBehaviour
     {
         IsStepping = true;
         Vector3 startPos = transform.position;
-
         float currentSpeed = Mathf.Abs(movement.PlayerRigidbody.linearVelocity.x);
         float dynamicDistance = stepDistance + (currentSpeed * 0.03f);
 
-        // Kaki ayun mendarat mendahului kaki tumpuan (stance leg)
         float stanceX = otherLeg != null ? otherLeg.transform.position.x : footHome.position.x;
         float targetX = stanceX + (moveDir * dynamicDistance);
-
         Vector2 rayOrigin = new Vector2(targetX, footHome.position.y + 1.5f);
         RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, 4f, groundLayer);
 
-        Vector3 targetPos = new Vector3(targetX, footHome.position.y, transform.position.z);
-        if (hit.collider != null)
-        {
-            float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
-            // Tolak permukaan yang terlalu curam / tebing samping
-            if (slopeAngle <= maxSlopeAngle)
-            {
-                targetPos = new Vector3(hit.point.x, hit.point.y + footYOffset, transform.position.z);
-                AlignWithNormal(hit.normal);
-            }
-        }
+        // (D) FIX: validasi permukaan SEBELUM ayunan dimulai. Tidak ada lagi target melayang.
+        if (hit.collider == null) { AbortStep(); yield break; }
+        float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
+        if (slopeAngle > maxSlopeAngle) { AbortStep(); yield break; }
+
+        Vector3 targetPos = new Vector3(hit.point.x, hit.point.y + footYOffset, transform.position.z);
+        AlignWithNormal(hit.normal);
 
         float t = 0f;
         while (t < 1f)
         {
             if (!movement.IsGrounded) break;
-
             t += Time.deltaTime * stepSpeed;
-             float smoothT = Mathf.SmoothStep(0f, 1f, t);
+            float smoothT = Mathf.SmoothStep(0f, 1f, t);
             Vector3 currentPos = Vector3.Lerp(startPos, targetPos, smoothT);
-
             currentPos.y += Mathf.Sin(t * MathF.PI) * stepHeight;
-
             transform.position = currentPos;
             yield return null;
         }
-
         transform.position = targetPos;
         IsStepping = false;
+        if (otherLeg != null)
+        {
+            this.isMyTurn = false;
+            otherLeg.isMyTurn = true;
+        }
+    }
 
+    // (D) pembatalan step aman: kaki tetap menapak di tempatnya, giliran dilepas ke kaki lain
+    private void AbortStep()
+    {
+        IsStepping = false;
         if (otherLeg != null)
         {
             this.isMyTurn = false;
@@ -126,7 +149,6 @@ public class ProceduralBipedLeg2D : MonoBehaviour
     private void AlignWithNormal(Vector2 normal)
     {
         if (normal.y <= 0.4f) return;
-
         float angle = Mathf.Atan2(normal.y, normal.x) * Mathf.Rad2Deg - 90f;
         angle = Mathf.Clamp(angle, -maxSlopeAngle, maxSlopeAngle);
         _targetRotation = Quaternion.Euler(0, 0, angle);
