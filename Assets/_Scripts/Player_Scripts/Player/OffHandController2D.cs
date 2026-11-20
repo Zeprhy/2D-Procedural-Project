@@ -14,6 +14,9 @@ public class OffHandController2D : MonoBehaviour
     [SerializeField] private Transform _lHandBone;
     [SerializeField] private float _handAngleOffset = 90f;
 
+    [Header("Senjata yang Sedang Dipegang")]
+    [SerializeField] private WeaponLogic _equippedWeapon;
+
     [Header("Pose Santai (Idle saat Klik Kanan Dilepas)")]
     [SerializeField] private Vector2 _idleOffset = new Vector2(-0.05f, -0.38f);
 
@@ -33,6 +36,8 @@ public class OffHandController2D : MonoBehaviour
     private Vector3 _handVelocity;
     private float _currentAimAngle;
     private float _angleVelocity;
+
+    public WeaponLogic EquippedWeapon => _equippedWeapon;
 
     private void Start()
     {
@@ -84,4 +89,11 @@ public class OffHandController2D : MonoBehaviour
             _currentReach = _minReach;
         }
     }
+
+    #region  Weapon Binding API
+    
+    public void SetEquippedWeapon(WeaponLogic weapon) => _equippedWeapon = weapon;
+    public void ClearEquippedWeapon() => _equippedWeapon = null;
+
+    #endregion
 }

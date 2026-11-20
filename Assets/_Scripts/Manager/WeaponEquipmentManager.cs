@@ -7,6 +7,11 @@ public class WeaponEquipmentManager : MonoBehaviour
     [Tooltip("Titik pasang visual senjata kanan (B_R_Hand -> Item_Holder_R)")]
     [SerializeField] private Transform _rightHandHolder;
 
+    [Header("Referensi Tangan Kiri / Off-Hand ")]
+    [SerializeField] private OffHandController2D _offHandController;
+    [Tooltip("Titik pasang visual senjata kiri (B_L_Hand -> Item_Holder_L)")]
+    [SerializeField] private Transform _leftHandHolder;
+
     [Header("Senjata Awal (Eksisting / Default)")]
     [Tooltip("WeaponLogic pedang yang sedang digunakan saat ini")]
     [SerializeField] private WeaponLogic _initialWeapon;
@@ -33,6 +38,12 @@ public class WeaponEquipmentManager : MonoBehaviour
     {
         if (_rightHandController == null)
             _rightHandController = GetComponentInChildren<RightHandController2D>();
+
+        if (_offHandController == null)
+            _offHandController = GetComponentInChildren<OffHandController2D>();
+
+        if (_facingReference == null)
+            _facingReference = transform;
     }
 
     private void OnEnable()
