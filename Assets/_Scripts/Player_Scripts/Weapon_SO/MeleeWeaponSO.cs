@@ -14,6 +14,13 @@ public class MeleeWeaponSO : BaseWeaponSO
 
     public override void Activate(GameObject owner, WeaponLogic weaponLogic)
     {
-        weaponLogic.PerformMeleeSlash(owner, this);
+        if (weaponLogic is MeleeLogic meleeLogic)
+        {
+            meleeLogic.PerformMeleeSlash(owner, this);
+        }
+        else
+        {
+            Debug.LogWarning($"<color=yellow>[MeleeWeaponSO]</color> '{WeaponName}' diaktifkan dengan WeaponLogic yang bukan MeleeLogic!", weaponLogic);
+        }
     }
 }

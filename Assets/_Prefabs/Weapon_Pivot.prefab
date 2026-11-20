@@ -132,8 +132,8 @@ GameObject:
   m_Component:
   - component: {fileID: 4040376587960482514}
   - component: {fileID: 961978717052433269}
-  - component: {fileID: 466529165042165860}
   - component: {fileID: 3701375873531461409}
+  - component: {fileID: 3898418053216416077}
   m_Layer: 9
   m_Name: Weapon_Pivot
   m_TagString: Untagged
@@ -234,39 +234,6 @@ PolygonCollider2D:
       - {x: 0.21013202, y: 0.1047021}
       - {x: 0.55284995, y: 0.67177343}
   m_UseDelaunayMesh: 1
---- !u!114 &466529165042165860
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6231095779114141848}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8ccf1d25b3da42146a19519e976e3e4a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WeaponLogic
-  _weaponData: {fileID: 11400000, guid: cc185da694878734285c42f29bdf9512, type: 2}
-  _damageInterval: 1
-  _targetLayer:
-    serializedVersion: 2
-    m_Bits: 4096
-  _vfxController: {fileID: 3701375873531461409}
-  _hitStopTimeScale: 0
-  _normalHitStopDuration: 0.035
-  _criticalHitStopDuration: 0.09
-  _weaponTip: {fileID: 5520168608187157376}
-  _maxTrajectorySamples: 5
-  _maxSampleTimeWindow: 0.08
-  _minSwingSpeedThreshold: 9
-  _minDownwardSpeed: 4
-  _maxDownwardAngleDeviation: 55
-  _headZoneRatio: 0.3
-  _criticalMultiplier: 1.5
-  _baseKnockbackForce: 7
-  _knockbackUpwardLift: 2.5
-  _playerRecoilForce: 3.5
-  _damageTextPrefab: {fileID: 6164039436554372379, guid: 70aa6f87fc8f2794eab96c01cd910dbd, type: 3}
 --- !u!114 &3701375873531461409
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -296,6 +263,39 @@ MonoBehaviour:
   _criticalLifetime: 0.11
   _criticalOffset: {x: 0, y: 0}
   _randomizeCriticalRotation: 1
+--- !u!114 &3898418053216416077
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6231095779114141848}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b88e5b5fae3431c4cb71e89222a925d1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MeleeLogic
+  _weaponData: {fileID: 11400000, guid: cc185da694878734285c42f29bdf9512, type: 2}
+  _hitStopTimeScale: 0.05
+  _normalHitStopDuration: 0.035
+  _criticalHitStopDuration: 0.09
+  _vfxController: {fileID: 3701375873531461409}
+  _damageTextPrefab: {fileID: 6164039436554372379, guid: 70aa6f87fc8f2794eab96c01cd910dbd, type: 3}
+  _damageInterval: 0.5
+  _targetLayer:
+    serializedVersion: 2
+    m_Bits: 4096
+  _weaponTip: {fileID: 5520168608187157376}
+  _maxTrajectorySamples: 5
+  _maxSampleTimeWindow: 0.08
+  _minSwingSpeedThreshold: 9
+  _minDownwardSpeed: 4
+  _maxDownwardAngleDeviation: 55
+  _headZoneRatio: 0.3
+  _criticalMultiplier: 2
+  _baseKnockbackForce: 7
+  _knockbackUpwardLift: 2.5
+  _playerRecoilForce: 3.5
 --- !u!1 &8529619113551375633
 GameObject:
   m_ObjectHideFlags: 0

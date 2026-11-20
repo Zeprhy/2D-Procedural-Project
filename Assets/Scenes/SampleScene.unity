@@ -368,6 +368,7 @@ MonoBehaviour:
   _lHandTarget: {fileID: 7469781703044582525}
   _lHandBone: {fileID: 7469781701714194708}
   _handAngleOffset: 60
+  _equippedWeapon: {fileID: 0}
   _idleOffset: {x: 0.2, y: -1}
   _minReach: 0.6
   _maxReach: 1
@@ -2170,6 +2171,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 798552166845835956, guid: 79f2adcc145c35d4c869dcb1d2cb8b0a, type: 3}
+      propertyPath: _spriteRenderer
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 4936218622484499984, guid: 79f2adcc145c35d4c869dcb1d2cb8b0a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 4.070336
@@ -2548,6 +2553,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponEquipmentManager
   _rightHandController: {fileID: 761505123}
   _rightHandHolder: {fileID: 7469781702973571908}
+  _offHandController: {fileID: 0}
+  _leftHandHolder: {fileID: 0}
   _initialWeapon: {fileID: 0}
   _worldItemPrefab: {fileID: 798552166845835956, guid: 79f2adcc145c35d4c869dcb1d2cb8b0a, type: 3}
   _dropOffset: {x: 0.5, y: 0.3}
