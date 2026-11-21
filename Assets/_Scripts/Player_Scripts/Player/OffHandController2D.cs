@@ -59,9 +59,7 @@ public class OffHandController2D : MonoBehaviour
     {
         if (_aimTracker == null || _leftShoulderPivot == null || _lHandTarget == null) return;
         float facingDir = _gfxTransform != null ? Mathf.Sign(_gfxTransform.localScale.x) : 1f;
-        Vector3 shoulderPos = _leftShoulderPivot.position;
-        Vector3 shoulderVel = (shoulderPos - _prevShoulderPos) / Mathf.Max(Time.deltaTime, 0.0001f);
-        _prevShoulderPos = shoulderPos;
+        ProccesLeftTriggerInput();
 
         if (_aimTracker.IsAimingLeft)
         {
@@ -89,24 +87,29 @@ public class OffHandController2D : MonoBehaviour
             Quaternion handRotation = Quaternion.Euler(0f, 0f, worldAimAngle + (facingDir * _handAngleOffset));
             if (_lHandBone != null) _lHandBone.rotation = handRotation;
         }
-        else
+        else 
         {
-            float swayTarget = Mathf.Clamp(-shoulderVel.x * _idleSwayInfluence * facingDir, -_idleMaxSway, _idleMaxSway);
-            _idleSwayVel += (swayTarget - _idleSway) * _idleSwayStiffness * Time.deltaTime;
-            _idleSwayVel *= Mathf.Max(0f, 1f - _idleSwayDamping * Time.deltaTime);
-            _idleSway += _idleSwayVel * Time.deltaTime;
-
-            Vector3 restPos = shoulderPos + new Vector3(_idleOffset.x * facingDir, _idleOffset.y, 0f);
-            restPos += new Vector3(-shoulderVel.x * 0.02f, -shoulderVel.y * 0.01f, 0f);
-            _currentTargetPos = Vector3.SmoothDamp(_currentTargetPos, restPos, ref _handVelocity, _idleSmoothTime);
+            Vector3 restPos = _leftShoulderPivot.position + new Vector3(_idleOffset.x * facingDir, _idleOffset.y, 0f);
+            _currentTargetPos = Vector3.Lerp(_currentTargetPos, restPos, Time.deltaTime * 10f);
             _lHandTarget.position = _currentTargetPos;
 
-            float angle = (-90f + _idleSway) * facingDir;
+            Quaternion restRotation = Quaternion.Euler(0f, 0f, -90f * facingDir);
             if (_lHandBone != null)
-                _lHandBone.rotation = Quaternion.Slerp(_lHandBone.rotation, Quaternion.Euler(0f, 0f, angle),
-                    1f - Mathf.Exp(-10f * Time.deltaTime));
+                _lHandBone.rotation = Quaternion.Slerp(_lHandBone.rotation, restRotation, Time.deltaTime * 10f);
+                
             _currentReach = _minReach;
         }
+    }
+
+    private void ProccesLeftTriggerInput()
+    {
+        if (Input.GetMouseButtonDown(1))
+            _equippedWeapon.OnTriggerDown(gameObject);
+        else if (Input.GetMouseButton(1))
+            _equippedWeapon.OnTriggerHeld(gameObject);
+
+        if (Input.GetMouseButtonUp(1))
+            _equippedWeapon.OnTriggerUp(gameObject);
     }
 
     #region  Weapon Binding API

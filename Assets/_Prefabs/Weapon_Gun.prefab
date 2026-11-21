@@ -196,6 +196,12 @@ MonoBehaviour:
   _vfxController: {fileID: 8391466616086247211}
   _damageTextPrefab: {fileID: 6164039436554372379, guid: 70aa6f87fc8f2794eab96c01cd910dbd, type: 3}
   _firePoint: {fileID: 842740239831630730}
+  _targetLayer:
+    serializedVersion: 2
+    m_Bits: 4096
+  _obstacleLayer:
+    serializedVersion: 2
+    m_Bits: 1048576
   _energyCore: {fileID: 0}
 --- !u!60 &6305326913625075491
 PolygonCollider2D:

@@ -7,7 +7,7 @@ public class WeaponEquipmentManager : MonoBehaviour
     [Tooltip("Titik pasang visual senjata kanan (B_R_Hand -> Item_Holder_R)")]
     [SerializeField] private Transform _rightHandHolder;
 
-    [Header("Referensi Tangan Kiri / Off-Hand (Stage 6.1)")]
+    [Header("Referensi Tangan Kiri / Off-Hand")]
     [SerializeField] private OffHandController2D _offHandController;
     [Tooltip("Titik pasang visual senjata kiri (B_L_Hand -> Item_Holder_L)")]
     [SerializeField] private Transform _leftHandHolder;
@@ -32,11 +32,11 @@ public class WeaponEquipmentManager : MonoBehaviour
     [Tooltip("Referensi transform arah hadap karakter (misal GFX), fallback ke transform root jika kosong")]
     [SerializeField] private Transform _facingReference;
 
-    // Properti publik untuk status equipment
     public WeaponLogic CurrentWeapon { get; private set; }
-    public WeaponLogic CurrentSecondaryWeapon {get; private set;}
+    public WeaponLogic CurrentSecondaryWeapon { get; private set; }
     public BaseWeaponSO CurrentWeaponData { get; private set; }
-    public bool HasEquippedWeapon => CurrentWeapon != null;
+
+    public bool HasEquippedWeapon => CurrentWeapon != null || CurrentSecondaryWeapon != null;
     public bool IsDualWielding => CurrentWeapon != null && CurrentSecondaryWeapon != null;
 
     private void Awake()
@@ -255,6 +255,7 @@ public class WeaponEquipmentManager : MonoBehaviour
         //  TRANSAKSI ATOMIK DENGAN PERLINDUNGAN ROLLBACK
         try
         {
+            //right Gun
             rightInstance = Instantiate(weaponData.WeaponPrefab, _rightHandHolder);
             rightInstance.transform.localScale = Vector3.one;
             AlignWeaponGrip(rightInstance.transform, "Grip_Point_R");
@@ -268,7 +269,7 @@ public class WeaponEquipmentManager : MonoBehaviour
                 RollbackDualEquip(rightInstance, leftInstance, isRightRegistered, isLeftRegistered, isCoreInitialized, prevRight, prevLeft, prevData);
                 return false;
             }
-
+            //Left Gun
             leftInstance = Instantiate(weaponData.SecondaryWeaponPrefab, _leftHandHolder);
             leftInstance.transform.localScale = Vector3.one;
             AlignWeaponGrip(leftInstance.transform, "Grip_Point_L");
@@ -282,6 +283,9 @@ public class WeaponEquipmentManager : MonoBehaviour
                 RollbackDualEquip(rightInstance, leftInstance, isRightRegistered, isLeftRegistered, isCoreInitialized, prevRight, prevLeft, prevData);
                 return false;
             }
+
+            rightGun.SetHandOrientation(true);
+            leftGun.SetHandOrientation(false);
 
             if (gunSO != null && _energyCore != null)
             {
@@ -303,20 +307,17 @@ public class WeaponEquipmentManager : MonoBehaviour
 
             worldItem.MarkAsConsumed();
             Destroy(worldItem.gameObject);
-
-            Debug.Log($"<color=green>[WeaponEquipmentManager]</color> Transaksi Berhasil: Sepasang Dual Pistol '{weaponData.WeaponName}' terpasang atomik!", this);
             return true;
         }
         catch (System.Exception ex)
         {
-            // Tangani exception runtime engine yang tidak terduga
             Debug.LogError($"<color=red>[WeaponEquipmentManager]</color> Exception tak terduga saat transaksi Dual Pistol: {ex.Message}\n{ex.StackTrace}", this);
             RollbackDualEquip(rightInstance, leftInstance, isRightRegistered, isLeftRegistered, isCoreInitialized, prevRight, prevLeft, prevData);
             return false;
         }
     }
 
-     /// <summary>
+    /// <summary>
     /// Mengembalikan seluruh sistem ke kondisi sebelum transaksi dimulai secara aman dan bersih
     /// </summary>
     private void RollbackDualEquip(
@@ -331,7 +332,6 @@ public class WeaponEquipmentManager : MonoBehaviour
     {
         Debug.LogWarning("<color=yellow>[WeaponEquipmentManager]</color> Menjalankan Rollback Transaksi Dual Pistol...", this);
 
-        // 1. Bersihkan referensi controller jika sempat terdaftar
         if (rightReg && _rightHandController != null)
         {
             if (prevRight != null) _rightHandController.SetEquippedWeapon(prevRight);
@@ -344,17 +344,14 @@ public class WeaponEquipmentManager : MonoBehaviour
             else _offHandController.ClearEquippedWeapon();
         }
 
-        // 2. Reset GunEnergyCore jika sempat diinisialisasi
         if (coreInit && _energyCore != null)
-        {
             _energyCore.ResetSystem();
-        }
 
-        // 3. Hancurkan GameObject visual yang sempat di-instantiate di hierarki
+        // Hancurkan GameObject visual yang sempat di-instantiate di hierarki
         if (rightInst != null) Destroy(rightInst);
         if (leftInst != null) Destroy(leftInst);
 
-        // 4. Pulihkan state manager ke snapshot awal
+        //  Pulihkan state manager ke snapshot awal
         CurrentWeapon = prevRight;
         CurrentSecondaryWeapon = prevLeft;
         CurrentWeaponData = prevData;

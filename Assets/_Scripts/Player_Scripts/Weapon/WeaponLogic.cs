@@ -44,6 +44,31 @@ public abstract class WeaponLogic : MonoBehaviour
 
     #region Hit Stop Management (Common System)
 
+    #region Trigger Lifecycle API 
+
+    /// <summary>
+    /// Dipanggil saat tombol picu mulai ditekan (Button Down)
+    /// </summary>
+    public virtual void OnTriggerDown(GameObject owner) => _currentOwner = owner;
+
+    /// <summary>
+    /// Dipanggil saat tombol picu sedang ditahan (Button Held).
+    /// Default: memanggil TriggerAttack() agar senjata Melee tetap menyerang normal.
+    /// </summary>
+    public virtual void OnTriggerHeld(GameObject owner)
+    {
+        _currentOwner = owner;
+        TriggerAttack(owner);
+    }
+
+    /// <summary>
+    /// Dipanggil saat tombol picu dilepaskan (Button Up).
+    /// Digunakan oleh senjata api untuk mekanisme Release-to-Fire.
+    /// </summary>
+    public virtual void OnTriggerUp(GameObject owner) => _currentOwner = owner;
+    
+    #endregion
+
     public void RequestHitStop(bool isCritical)
     {
         float duration = isCritical ? _criticalHitStopDuration : _normalHitStopDuration;

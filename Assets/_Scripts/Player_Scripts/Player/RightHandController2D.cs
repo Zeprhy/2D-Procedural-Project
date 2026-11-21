@@ -65,16 +65,10 @@ public class RightHandController2D : MonoBehaviour
         if (_aimTracker == null || _rightShoulderPivot == null || _rHandTarget == null) return;
 
         float facingDir = _gfxTransform != null ? Mathf.Sign(_gfxTransform.localScale.x) : 1f;
-        Vector3 shoulderPos = _rightShoulderPivot.position;
-        Vector3 shoulderVel = (shoulderPos - _prevShoulderPos) / Mathf.Max(Time.deltaTime, 0.0001f);
-        _prevShoulderPos = shoulderPos;
+        ProcessRightTriggerInput();
 
         if (_aimTracker.IsAimingRight)
         {
-            // Null-check aman: serangan hanya dipicu jika sedang memegang senjata
-            if (_equippedWeapon != null)
-                _equippedWeapon.TriggerAttack(gameObject);
-
             Vector2 toMouse = _aimTracker.MouseWorldPosition - _rightShoulderPivot.position;
             float distanceToMouse = toMouse.magnitude;
 
@@ -106,25 +100,28 @@ public class RightHandController2D : MonoBehaviour
         }
         else
         {
-            // Ayunan: tangan ketinggalan & mengayun lawan arah gerak, sesuai kecepatan player
-            float swayTarget = Mathf.Clamp(-shoulderVel.x * _idleSwayInfluence * facingDir, -_idleMaxSway, _idleMaxSway);
-            _idleSwayVel += (swayTarget - _idleSway) * _idleSwayStiffness * Time.deltaTime;
-            _idleSwayVel *= Mathf.Max(0f, 1f - _idleSwayDamping * Time.deltaTime);
-            _idleSway += _idleSwayVel * Time.deltaTime;
-
             Vector3 restPos = _rightShoulderPivot.position + new Vector3(_swordRestOffset.x * facingDir, _swordRestOffset.y, 0f);
-            // Lag posisi world-space: lari ke kanan -> tangan tertinggal ke kiri sedikit
-            restPos.x -= shoulderVel.x * 0.02f;
-            restPos.y -= shoulderVel.y * 0.01f;
-            _currentHandTargetPos = Vector3.SmoothDamp(_currentHandTargetPos, restPos, ref _handVelocity, _idleSmoothTime);
+            _currentHandTargetPos = Vector3.Lerp(_currentHandTargetPos, restPos, Time.deltaTime * 8f);
             _rHandTarget.position = _currentHandTargetPos;
 
-            float angle = (_swordRestAngle + _idleSway) * facingDir;
-            if (_rHandBone != null)
-                _rHandBone.rotation = Quaternion.Slerp(_rHandBone.rotation, Quaternion.Euler(0f, 0f, angle),
-                    1f - Mathf.Exp(-10f * Time.deltaTime));
+            Quaternion restRotation = Quaternion.Euler(0f, 0f, _swordRestAngle * facingDir);
+            if (_rHandBone != null) _rHandBone.rotation = Quaternion.Slerp(_rHandBone.rotation, restRotation, Time.deltaTime * 8f);
+
             _currentSpringReach = _minReach;
         }
+    }
+
+    private void ProcessRightTriggerInput()
+    {
+        if (_equippedWeapon == null);
+
+        if (Input.GetMouseButtonDown(0))
+            _equippedWeapon.OnTriggerDown(gameObject);
+        else if (Input.GetMouseButtonDown(0))
+            _equippedWeapon.OnTriggerHeld(gameObject);
+
+        if (Input.GetMouseButtonUp(0))
+            _equippedWeapon.OnTriggerUp(gameObject);
     }
 
     #region Weapon Binding API
@@ -132,18 +129,12 @@ public class RightHandController2D : MonoBehaviour
     /// <summary>
     /// Dipanggil oleh WeaponEquipmentManager untuk mendaftarkan senjata yang sedang aktif
     /// </summary>
-    public void SetEquippedWeapon(WeaponLogic weapon)
-    {
-        _equippedWeapon = weapon;
-    }
+    public void SetEquippedWeapon(WeaponLogic weapon) => _equippedWeapon = weapon;
 
     /// <summary>
     /// Mengosongkan referensi senjata saat tangan tidak memegang apapun
     /// </summary>
-    public void ClearEquippedWeapon()
-    {
-        _equippedWeapon = null;
-    }
+    public void ClearEquippedWeapon() => _equippedWeapon = null;
 
     #endregion
 }
