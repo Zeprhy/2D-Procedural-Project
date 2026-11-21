@@ -103,6 +103,8 @@ public class OffHandController2D : MonoBehaviour
 
     private void ProccesLeftTriggerInput()
     {
+        if (_equippedWeapon == null) return;
+        
         if (Input.GetMouseButtonDown(1))
             _equippedWeapon.OnTriggerDown(gameObject);
         else if (Input.GetMouseButton(1))

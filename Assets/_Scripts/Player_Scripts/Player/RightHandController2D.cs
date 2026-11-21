@@ -113,7 +113,7 @@ public class RightHandController2D : MonoBehaviour
 
     private void ProcessRightTriggerInput()
     {
-        if (_equippedWeapon == null);
+        if (_equippedWeapon == null) return;
 
         if (Input.GetMouseButtonDown(0))
             _equippedWeapon.OnTriggerDown(gameObject);
