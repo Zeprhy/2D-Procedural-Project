@@ -3,7 +3,6 @@ using UnityEngine;
 public class GunLogic : WeaponLogic
 {
     [Header("Transform Referensi Senjata Api")]
-    [Header("Transform Referensi Senjata Api")]
     [Tooltip("Titik keluarnya proyektil (Muzzle Point)")]
     [SerializeField] private Transform _firePoint;
 
@@ -13,7 +12,7 @@ public class GunLogic : WeaponLogic
     [Tooltip("Layer rintangan lingkungan (Ground & Wall)")]
     [SerializeField] private LayerMask _obstacleLayer;
 
-    [Header("Sistem Energi Bersama (Stage 6.2)")]
+    [Header("Sistem Energi Bersama")]
     [SerializeField] protected GunEnergyCore _energyCore;
 
     public Transform FirePoint => _firePoint != null ? _firePoint : transform;
@@ -28,17 +27,22 @@ public class GunLogic : WeaponLogic
     {
         base.Awake();
         _aimTracker = FindFirstObjectByType<PlayerAimTracker2D>();
+
+        if (_firePoint == null)
+        {
+            Transform muzzle = transform.Find("Muzzle_Point");
+            if (muzzle != null) _firePoint = muzzle;
+        }
     }
 
     private void Update()
     {
         if (_fireCooldownTimer > 0f)
+        {
             _fireCooldownTimer -= Time.deltaTime;
+        }
     }
 
-     /// <summary>
-    /// Diinisialisasi oleh WeaponEquipmentManager saat dipasang
-    /// </summary>
     public void InitializeGun(GunEnergyCore core, bool isRightHand)
     {
         _energyCore = core;
@@ -50,18 +54,15 @@ public class GunLogic : WeaponLogic
             _aimTracker = FindFirstObjectByType<PlayerAimTracker2D>();
     }
 
-    /// <summary>
-    /// Dipanggil oleh WeaponEquipmentManager saat senjata dipasang ke tangan
-    /// </summary>
     public void SetEnergyCore(GunEnergyCore core) => _energyCore = core;
     public void SetHandOrientation(bool isRightHand) => IsRightHand = isRightHand;
+
     public override void TriggerAttack(GameObject owner)
     {
-        if (_weaponData != null && !IsAttacking)
-            _currentOwner = owner;
+        _currentOwner = owner;
     }
 
-    #region Independent Trigger Lifecycle
+    #region Independent Trigger Lifecycle (Release-to-Fire)
 
     public override void OnTriggerDown(GameObject owner)
     {
@@ -79,8 +80,7 @@ public class GunLogic : WeaponLogic
 
         if (_energyCore != null)
             _energyCore.NotifyTriggerState(IsRightHand, true);
-
-        // Tidak ada tembakan tombol yang di tahan
+        // Pistol tidak menembak saat ditahan (No automatic fire)
     }
 
     public override void OnTriggerUp(GameObject owner)
@@ -98,38 +98,16 @@ public class GunLogic : WeaponLogic
 
     private void ExecuteFireTransaction(GameObject owner)
     {
-        if (_fireCooldownTimer > 0) return;
+        if (_fireCooldownTimer > 0f) return;
 
         GunWeaponSO gunData = _weaponData as GunWeaponSO;
-        if (gunData == null)
-        {
-            Debug.LogWarning($"<color=yellow>[GunLogic]</color> Gagal menembak: WeaponData bukan GunWeaponSO!", this);
-            return;
-        }
-
-        if (gunData.ProjectilePrefab == null)
-        {
-            Debug.LogWarning($"<color=yellow>[GunLogic]</color> Gagal menembak: ProjectilePrefab belum di-assign pada '{gunData.WeaponName}'!", this);
-            return;
-        }
-
-        if (FirePoint == null)
-        {
-            Debug.LogWarning($"<color=yellow>[GunLogic]</color> Gagal menembak: FirePoint null pada '{gameObject.name}'!", this);
-            return;
-        }
-
-        if (_energyCore == null)
-        {
-            Debug.LogWarning($"<color=yellow>[GunLogic]</color> Gagal menembak: GunEnergyCore belum terhubung!", this);
-            return;
-        }
-
+        if (gunData == null) return;
+        if (gunData.ProjectilePrefab == null) return;
+        if (FirePoint == null) return;
+        if (_energyCore == null) return;
         if (!_energyCore.TryConsumeShoot()) return;
-
         SpawnEnergyProjectile(gunData, owner);
         _fireCooldownTimer = gunData.FireRate;
-
     }
 
     private void SpawnEnergyProjectile(GunWeaponSO gunData, GameObject owner)
@@ -150,6 +128,7 @@ public class GunLogic : WeaponLogic
 
         if (projectile != null)
         {
+            // Operkan _vfxController dan _damageTextPrefab ke dalam proyektil!
             projectile.Initialize(
                 fireDirection,
                 gunData.DamagePerShot,
@@ -157,18 +136,14 @@ public class GunLogic : WeaponLogic
                 gunData.ProjectileLifetime,
                 _targetLayer,
                 _obstacleLayer,
-                owner
+                owner,
+                _vfxController,
+                _damageTextPrefab
             );
         }
         else
         {
-            Debug.LogError($"<color=red>[GunLogic]</color> ProjectilePrefab '{gunData.ProjectilePrefab.name}' tidak memiliki komponen EnergyProjectile2D!", this);
             Destroy(bulletObj);
         }
-    }
-
-    public virtual void PerformShoot(GameObject owner, GunWeaponSO data)
-    {
-        Debug.Log($"<color=orange>[GunLogic]</color> '{data.WeaponName}' ditembakkan oleh {owner.name}!", this);
     }
 }

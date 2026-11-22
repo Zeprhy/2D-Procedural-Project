@@ -56,13 +56,19 @@ public class GunWeaponSO : BaseWeaponSO
 
     public override void Activate(GameObject owner, WeaponLogic weaponLogic)
     {
-        if (weaponLogic is GunLogic gunLogic)
+        if (weaponLogic is GunLogic)
         {
-            gunLogic.PerformShoot(owner, this);
+            // GunLogic menggunakan Trigger Lifecycle:
+            // OnTriggerDown -> OnTriggerHeld -> OnTriggerUp.
+            // Penembakan dilakukan ketika trigger dilepas.
+            // Tidak perlu memanggil method tembak dari sini.
         }
         else
         {
-            Debug.LogWarning($"<color=yellow>[GunWeaponSO]</color> '{WeaponName}' diaktifkan dengan WeaponLogic yang bukan GunLogic!", weaponLogic);
+            Debug.LogWarning(
+                $"<color=yellow>[GunWeaponSO]</color> '{WeaponName}' diaktifkan dengan WeaponLogic yang bukan GunLogic!",
+                weaponLogic
+            );
         }
     }
 }

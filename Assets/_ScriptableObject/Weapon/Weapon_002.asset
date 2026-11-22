@@ -25,10 +25,10 @@ MonoBehaviour:
   _fireRate: 0.25
   _projectileSpeed: 22
   _projectileLifetime: 2.5
-  _maxBattery: 100
+  _maxBattery: 500
   _batteryCostPerShot: 10
   _batteryRegenRate: 25
-  _maxHeat: 100
+  _maxHeat: 250
   _heatPerShot: 15
   _heatDissipationRate: 20
   _idleDelay: 1.75

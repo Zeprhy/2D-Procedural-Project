@@ -30,6 +30,12 @@ public abstract class WeaponLogic : MonoBehaviour
     {
         if (_vfxController == null)
             _vfxController = GetComponent<CombatVFXController>();
+
+        if (_vfxController == null)
+            _vfxController = GetComponentInParent<CombatVFXController>();
+
+        if (_vfxController == null)
+            _vfxController = FindFirstObjectByType<CombatVFXController>();
     }
 
     protected virtual void OnDisable()
@@ -37,23 +43,29 @@ public abstract class WeaponLogic : MonoBehaviour
         RestoreTimeScale();
     }
 
+    public void SetWeaponData(BaseWeaponSO data)
+    {
+        _weaponData = data;
+    }
+
     /// <summary>
-    /// Titik masuk aktivasi serangan umum yang dipanggil oleh Hand Controller
+    /// Titik masuk aktivasi serangan umum
     /// </summary>
     public abstract void TriggerAttack(GameObject owner);
 
-    #region Hit Stop Management (Common System)
-
-    #region Trigger Lifecycle API 
+    #region Trigger Lifecycle API (Restored & Synchronized)
 
     /// <summary>
-    /// Dipanggil saat tombol picu mulai ditekan (Button Down)
+    /// Klik awal (Button Down): Melee langsung menyerang di frame 1, GunLogic mengabaikannya untuk release-to-fire
     /// </summary>
-    public virtual void OnTriggerDown(GameObject owner) => _currentOwner = owner;
+    public virtual void OnTriggerDown(GameObject owner)
+    {
+        _currentOwner = owner;
+        TriggerAttack(owner); // Perbaikan Melee: Eksekusi langsung saat tombol ditekan
+    }
 
     /// <summary>
-    /// Dipanggil saat tombol picu sedang ditahan (Button Held).
-    /// Default: memanggil TriggerAttack() agar senjata Melee tetap menyerang normal.
+    /// Ditahan (Button Held): Melee terus mengulang serangan saat cooldown selesai
     /// </summary>
     public virtual void OnTriggerHeld(GameObject owner)
     {
@@ -62,12 +74,16 @@ public abstract class WeaponLogic : MonoBehaviour
     }
 
     /// <summary>
-    /// Dipanggil saat tombol picu dilepaskan (Button Up).
-    /// Digunakan oleh senjata api untuk mekanisme Release-to-Fire.
+    /// Dilepas (Button Up): Senjata api menggunakan ini untuk menembak
     /// </summary>
-    public virtual void OnTriggerUp(GameObject owner) => _currentOwner = owner;
-    
+    public virtual void OnTriggerUp(GameObject owner)
+    {
+        _currentOwner = owner;
+    }
+
     #endregion
+
+    #region Hit Stop Management
 
     public void RequestHitStop(bool isCritical)
     {

@@ -1,6 +1,5 @@
 using UnityEngine;
 using _Scripts.Interface;
-using System.Linq;
 
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(Collider2D))]
@@ -18,6 +17,10 @@ public class EnergyProjectile2D : MonoBehaviour
     [Tooltip("Layer rintangan lingkungan (Ground & Wall) yang menghancurkan peluru")]
     [SerializeField] private LayerMask _obstacleLayer;
 
+    [Header("Juicy Effect References (Gun Impact Feedback)")]
+    [SerializeField] private CombatVFXController _vfxController;
+    [SerializeField] private DamagePopUp2D _damageTextPrefab;
+
     private Rigidbody2D _rb;
     private Collider2D _col;
     private GameObject _owner;
@@ -26,29 +29,41 @@ public class EnergyProjectile2D : MonoBehaviour
 
     private void Awake()
     {
-        if (_rb == null)
-            _rb = GetComponent<Rigidbody2D>();
-        if (_col == null)
-            _col = GetComponent<Collider2D>();
+        _rb = GetComponent<Rigidbody2D>();
+        _col = GetComponent<Collider2D>();
 
         _col.isTrigger = true;
 
         _rb.gravityScale = 0f;
         _rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         _rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+        if (_vfxController == null)
+            _vfxController = FindFirstObjectByType<CombatVFXController>();
     }
 
     private void Update()
     {
         _lifeTimer += Time.deltaTime;
         if (_lifeTimer >= _lifetime)
+        {
             Despawn();
+        }
     }
 
     /// <summary>
-    /// Diinisialisasi saat peluru ditembakkan dari GunLogic (Sub-Stage B3)
+    /// Diinisialisasi oleh GunLogic dengan data tembakan dan referensi visual feedback
     /// </summary>
-    public void Initialize(Vector2 direction, float damage, float speed, float lifetime, LayerMask targetLayer, LayerMask obstacleLayer, GameObject owner)
+    public void Initialize(
+        Vector2 direction, 
+        float damage, 
+        float speed, 
+        float lifetime, 
+        LayerMask targetLayer, 
+        LayerMask obstacleLayer, 
+        GameObject owner,
+        CombatVFXController vfxController = null,
+        DamagePopUp2D damageTextPrefab = null)
     {
         _damage = damage;
         _speed = speed;
@@ -59,13 +74,19 @@ public class EnergyProjectile2D : MonoBehaviour
         _hasHit = false;
         _lifeTimer = 0f;
 
+        if (vfxController != null) _vfxController = vfxController;
+        if (damageTextPrefab != null) _damageTextPrefab = damageTextPrefab;
+
+        // Abaikan tabrakan fisik dengan tubuh pemain
         if (_owner != null)
         {
             Collider2D[] ownerColliders = _owner.GetComponentsInChildren<Collider2D>();
-            for ( int i = 0; i < ownerColliders.Length; i++)
+            for (int i = 0; i < ownerColliders.Length; i++)
             {
                 if (ownerColliders[i] != null && !ownerColliders[i].isTrigger)
+                {
                     Physics2D.IgnoreCollision(_col, ownerColliders[i], true);
+                }
             }
         }
 
@@ -78,21 +99,45 @@ public class EnergyProjectile2D : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (_hasHit) return;
+
         if (_owner != null && (collision.gameObject == _owner || collision.transform.IsChildOf(_owner.transform)))
             return;
+
         if (collision.GetComponent<EnergyProjectile2D>() != null)
             return;
 
-        if (((1 << collision.gameObject.layer) & _targetLayer.value) != 0)
+        // 1. CEK TARGET MUSUH (IDamageable)
+        bool isTargetLayer = (_targetLayer.value == 0) || (((1 << collision.gameObject.layer) & _targetLayer.value) != 0);
+
+        if (isTargetLayer)
         {
             IDamageable damageable = collision.GetComponentInParent<IDamageable>();
             if (damageable != null)
             {
                 _hasHit = true;
-                
+
+                // A. Hitung Vektor Knockback
                 Vector2 knockbackDir = _rb.linearVelocity.sqrMagnitude > 0.001f ? _rb.linearVelocity.normalized : (Vector2)transform.right;
                 Vector2 finalKnockback = knockbackDir * _knockbackForce;
 
+                // B. Titik Benturan Presisi
+                Vector3 contactPoint = collision.bounds.ClosestPoint(transform.position);
+
+                // C. Damage Popup (Floating Text)
+                if (_damageTextPrefab != null)
+                {
+                    Vector3 spawnPos = contactPoint + new Vector3(Random.Range(-0.2f, 0.2f), 0.5f, 0f);
+                    DamagePopUp2D popUp = Instantiate(_damageTextPrefab, spawnPos, Quaternion.identity);
+                    popUp.Setup(_damage, false);
+                }
+
+                // D. Directional Hit VFX
+                if (_vfxController != null)
+                {
+                    _vfxController.PlayNormalHit(contactPoint, knockbackDir);
+                }
+
+                // E. Terapkan Damage ke Musuh (Memicu White Flash & Squash)
                 damageable.TakeDamage(_damage, finalKnockback);
 
                 Despawn();
@@ -100,6 +145,7 @@ public class EnergyProjectile2D : MonoBehaviour
             }
         }
 
+        // 2. CEK RINTANGAN LINGKUNGAN (Ground & Wall)
         if (((1 << collision.gameObject.layer) & _obstacleLayer.value) != 0)
         {
             _hasHit = true;

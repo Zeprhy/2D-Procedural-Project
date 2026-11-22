@@ -55,18 +55,33 @@ public class MeleeLogic : WeaponLogic
     protected override void Awake()
     {
         base.Awake();
+
+        // Cari hitbox pada GameObject ini atau pada child
         _hitbox = GetComponent<PolygonCollider2D>();
-        _hitbox.enabled = false;
+        if (_hitbox == null)
+            _hitbox = GetComponentInChildren<PolygonCollider2D>();
+
+        if (_hitbox != null)
+        {
+            _hitbox.isTrigger = true; // Wajib Trigger agar OnTriggerEnter2D berjalan
+            _hitbox.enabled = false;
+        }
+        else
+        {
+            Debug.LogError($"<color=red>[MeleeLogic]</color> PolygonCollider2D tidak ditemukan pada '{gameObject.name}'!", this);
+        }
 
         if (_weaponTip == null)
         {
-            Debug.LogWarning($"<color=yellow>[MeleeLogic]</color> '_weaponTip' belum dipasang pada '{gameObject.name}'. Sistem akan menggunakan estimasi fallback dari Collider.", this);
+            // Auto-detect Weapon_Tip jika ada di child
+            Transform tip = transform.Find("Weapon_Tip");
+            if (tip != null) _weaponTip = tip;
+            else Debug.LogWarning($"<color=yellow>[MeleeLogic]</color> '_weaponTip' belum dipasang pada '{gameObject.name}'. Menggunakan fallback.", this);
         }
     }
 
     private void Update()
     {
-        // Trajectory hanya dicatat selama jendela serang (attack window) aktif
         if (IsAttacking)
         {
             RecordTrajectorySample();
@@ -76,33 +91,54 @@ public class MeleeLogic : WeaponLogic
     protected override void OnDisable()
     {
         base.OnDisable();
+        IsAttacking = false;
+        if (_hitbox != null) _hitbox.enabled = false;
         _trajectoryBuffer.Clear();
+        _coolingDownTargets.Clear();
     }
 
     public override void TriggerAttack(GameObject owner)
     {
-        if (_weaponData != null && !IsAttacking)
+        if (!IsAttacking)
         {
             _currentOwner = owner;
-            _weaponData.Activate(owner, this);
+
+            // Jika _weaponData terhubung, panggil Activate
+            if (_weaponData != null)
+            {
+                _weaponData.Activate(owner, this);
+            }
+            else
+            {
+                // Fallback darurat jika _weaponData belum di-assign
+                PerformMeleeSlash(owner, null);
+            }
         }
     }
 
-    public void PerformMeleeSlash(GameObject owner, MeleeWeaponSO data) => StartCoroutine(SlashRoutine(data));
+    public void PerformMeleeSlash(GameObject owner, MeleeWeaponSO data)
+    {
+        if (gameObject.activeInHierarchy)
+        {
+            StartCoroutine(SlashRoutine(data));
+        }
+    }
 
     private IEnumerator SlashRoutine(MeleeWeaponSO data)
     {
         IsAttacking = true;
-        _hitbox.enabled = true;
+        if (_hitbox != null) _hitbox.enabled = true;
 
         _trajectoryBuffer.Clear();
         RecordTrajectorySample();
 
-        yield return new WaitForSeconds(data.AttackCooldown);
+        float duration = (data != null && data.AttackCooldown > 0f) ? data.AttackCooldown : 0.4f;
+        yield return new WaitForSeconds(duration);
 
         IsAttacking = false;
-        _hitbox.enabled = false;
+        if (_hitbox != null) _hitbox.enabled = false;
         _trajectoryBuffer.Clear();
+        _coolingDownTargets.Clear();
     }
 
     private IEnumerator TargetDamageCooldownRoutine(IDamageable victim)
@@ -117,26 +153,32 @@ public class MeleeLogic : WeaponLogic
 
     private void ProcessDamage(Collider2D target)
     {
+        // 1. Abaikan collider pemilik sendiri
         if (target.gameObject == _currentOwner) return;
+        if (_currentOwner != null && target.transform.IsChildOf(_currentOwner.transform)) return;
 
-        if (((1 << target.gameObject.layer) & _targetLayer.value) == 0) return;
+        // 2. Pengecekan Layer (Jika _targetLayer tidak diatur/0, loloskan agar tidak memblokir serangan)
+        if (_targetLayer.value != 0 && (((1 << target.gameObject.layer) & _targetLayer.value) == 0))
+            return;
 
+        // 3. Cari komponen IDamageable
         IDamageable damageable = target.GetComponentInParent<IDamageable>();
         if (damageable == null) return;
 
+        // 4. Cegah multi-hit dalam 1 ayunan
         if (_coolingDownTargets.Contains(damageable)) return;
 
-        // 1. Titik Kontak Presisi
+        // 5. Titik Kontak Presisi
         Vector3 contactPoint = CalculateAccurateContactPoint(target);
 
-        // 2. Evaluasi Syarat Trajektori & Head Hit untuk Critical
+        // 6. Evaluasi Syarat Trajektori & Head Hit untuk Critical
         bool isCritical = EvaluateCriticalHit(target, contactPoint);
 
-        // 3. Kalkulasi Damage
-        float baseDamage = (_weaponData is MeleeWeaponSO melee) ? melee.Damage : 10f;
+        // 7. Kalkulasi Damage
+        float baseDamage = (_weaponData is MeleeWeaponSO melee) ? melee.Damage : 25f;
         float finalDamage = isCritical ? (baseDamage * _criticalMultiplier) : baseDamage;
 
-        // 4. Hitung Arah Benturan
+        // 8. Hitung Arah Benturan
         Vector2 hitDirection = Vector2.right;
         if (_currentOwner != null)
         {
@@ -145,7 +187,7 @@ public class MeleeLogic : WeaponLogic
                 hitDirection = toTarget.normalized;
         }
 
-        // 5. Memicu Modular Combat VFX
+        // 9. Memicu Modular Combat VFX
         if (_vfxController != null)
         {
             if (isCritical)
@@ -154,12 +196,12 @@ public class MeleeLogic : WeaponLogic
                 _vfxController.PlayNormalHit(contactPoint, hitDirection);
         }
 
-        // 6. Camera Shake & Zoom Punch
-        float weaponWeight = _weaponData != null ? _weaponData.Weight : 5f;
+        // 10. Camera Shake & Zoom Punch
+        float weaponWeight = _weaponData != null ? _weaponData.Weight : 6f;
         if (CameraFollow2D.Instance != null)
             CameraFollow2D.Instance.TriggerHitImpact(weaponWeight, isCritical);
 
-        // 7. Floating Damage Text
+        // 11. Floating Damage Text
         if (_damageTextPrefab != null)
         {
             Vector3 spawnPos = contactPoint + new Vector3(Random.Range(-0.2f, 0.2f), 0.5f, 0);
@@ -167,10 +209,10 @@ public class MeleeLogic : WeaponLogic
             popUp.Setup(finalDamage, isCritical);
         }
 
-        // 8. Hit Stop
+        // 12. Hit Stop
         RequestHitStop(isCritical);
 
-        // 9. Knockback Musuh & Recoil Player
+        // 13. Knockback Musuh & Recoil Player
         float hitDirX = Mathf.Sign(hitDirection.x);
         float weightMod = Mathf.Max(0.5f, weaponWeight / 5f);
         float finalKnockback = _baseKnockbackForce * weightMod * (isCritical ? 1.4f : 1.0f);
@@ -179,11 +221,14 @@ public class MeleeLogic : WeaponLogic
         if (_currentOwner != null)
         {
             PlatformerMovement playerMovement = _currentOwner.GetComponent<PlatformerMovement>();
+            if (playerMovement == null)
+                playerMovement = _currentOwner.GetComponentInParent<PlatformerMovement>();
+
             if (playerMovement != null)
                 playerMovement.ApplyMicroRecoil(_playerRecoilForce, hitDirX);
         }
 
-        // 10. Terapkan Damage
+        // 14. Terapkan Damage
         StartCoroutine(TargetDamageCooldownRoutine(damageable));
         damageable.TakeDamage(finalDamage, knockbackVector);
     }

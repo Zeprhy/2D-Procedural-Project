@@ -90,7 +90,13 @@ public class WeaponEquipmentManager : MonoBehaviour
     public void EquipExistingWeapon(WeaponLogic weapon)
     {
         CurrentWeapon = weapon;
-        CurrentWeaponData = (weapon != null) ? weapon.WeaponData : null;
+        if (weapon != null)
+        {
+            if (weapon.WeaponData != null)
+                CurrentWeaponData = weapon.WeaponData;
+            else if (CurrentWeaponData != null)
+                weapon.SetWeaponData(CurrentWeaponData);
+        }
 
         if (_rightHandHolder != null && weapon != null && weapon.transform.IsChildOf(_rightHandHolder))
         {
@@ -184,6 +190,7 @@ public class WeaponEquipmentManager : MonoBehaviour
             return false;
         }
 
+        newWeaponLogic.SetWeaponData(weaponData);
         EquipExistingWeapon(newWeaponLogic);
         worldItem.MarkAsConsumed();
         Destroy(worldItem.gameObject);

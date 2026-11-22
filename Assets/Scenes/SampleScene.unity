@@ -424,7 +424,7 @@ MonoBehaviour:
   _gfxTransform: {fileID: 7469781702054462226}
   _lHandTarget: {fileID: 7469781703044582525}
   _lHandBone: {fileID: 7469781701714194708}
-  _handAngleOffset: 30
+  _handAngleOffset: 5
   _equippedWeapon: {fileID: 0}
   _idleOffset: {x: 0.2, y: -1}
   _minReach: 0.6
@@ -433,6 +433,11 @@ MonoBehaviour:
   _maxAimAngle: 90
   _springStiffness: 140
   _springDamping: 14
+  _idleSmoothTime: 0.1
+  _idleSwayStiffness: 60
+  _idleSwayDamping: 8
+  _idleSwayInfluence: 4
+  _idleMaxSway: 20
 --- !u!1 &235276749
 GameObject:
   m_ObjectHideFlags: 0
@@ -1154,7 +1159,7 @@ MonoBehaviour:
   _gfxTransform: {fileID: 7469781702054462226}
   _rHandTarget: {fileID: 7469781702848666608}
   _rHandBone: {fileID: 7469781702684168655}
-  _handAngleOffset: 30
+  _handAngleOffset: 5
   _equippedWeapon: {fileID: 0}
   _swordRestOffset: {x: 0.12, y: -1}
   _swordRestAngle: -65
@@ -1167,6 +1172,11 @@ MonoBehaviour:
   _springStiffness: 120
   _springDamping: 12
   _aimLagTime: 0.12
+  _idleSmoothTime: 0.1
+  _idleSwayStiffness: 60
+  _idleSwayDamping: 8
+  _idleSwayInfluence: 4
+  _idleMaxSway: 20
 --- !u!1 &857513040
 GameObject:
   m_ObjectHideFlags: 0
@@ -2476,6 +2486,9 @@ MonoBehaviour:
   _stepHeight: 0.55
   _stepSearchDist: 0.4
   _maxSlopeAngle: 45
+  _stairFaceMinAngle: 80
+  _stopVelocityThreshold: 0.15
+  _reversalAcceleration: 15
 --- !u!1 &7469781701559126101
 GameObject:
   m_ObjectHideFlags: 0
@@ -3339,6 +3352,9 @@ MonoBehaviour:
   defaultHeightOffset: 1.3
   smoothSpeed: 10
   bobbingIntensity: 0.1
+  maxBobOffset: 0.05
+  bobSmoothTime: 0.12
+  idleHeightBonus: 0.08
 --- !u!4 &7469781702054462226
 Transform:
   m_ObjectHideFlags: 0
@@ -4898,6 +4914,7 @@ MonoBehaviour:
   footYOffset: 0.2
   maxSlopeAngle: 45
   isMyTurn: 0
+  idleStanceWidth: 0.1
 --- !u!114 &7469781702881834768
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5069,6 +5086,7 @@ MonoBehaviour:
   footYOffset: 0.2
   maxSlopeAngle: 45
   isMyTurn: 1
+  idleStanceWidth: 0.1
 --- !u!4 &7469781702973571908
 Transform:
   m_ObjectHideFlags: 0
