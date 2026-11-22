@@ -50,10 +50,7 @@ public class OffHandController2D : MonoBehaviour
         if (_aimTracker == null || _leftShoulderPivot == null || _lHandTarget == null) return;
         float facingDir = _gfxTransform != null ? Mathf.Sign(_gfxTransform.localScale.x) : 1f;
 
-        // 1. Pemrosesan Input Berdasarkan Mode Trigger Senjata Kiri
         ProcessLeftTriggerInput();
-
-        // 2. Kontrol Prosedural Lengan & Bidikan Kiri
         if (_aimTracker.IsAimingLeft)
         {
             Vector2 toMouse = _aimTracker.MouseWorldPosition - _leftShoulderPivot.position;
@@ -68,7 +65,8 @@ public class OffHandController2D : MonoBehaviour
                 toMouse, facingDir, _minAimAngle, _maxAimAngle, 0.08f, ref _angleVelocity, _currentAimAngle
             );
 
-            float rad = _currentAimAngle * Mathf.Deg2Rad;
+            float recoilOffset = (_equippedWeapon is GunLogic gun) ? gun.CurrentAimRecoil : 0f;
+            float rad = (_currentAimAngle + recoilOffset) * Mathf.Deg2Rad;
 
             Vector3 targetOffset = new Vector3(Mathf.Cos(rad) * _currentReach * facingDir, Mathf.Sin(rad) * _currentReach, 0f);
             Vector3 desiredHandPos = _leftShoulderPivot.position + targetOffset;

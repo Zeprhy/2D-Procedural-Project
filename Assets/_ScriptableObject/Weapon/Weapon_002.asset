@@ -19,9 +19,9 @@ MonoBehaviour:
   weaponHandType: 1
   _triggerMode: 1
   _visualConfiguration: 1
-  _weaponPrefab: {fileID: 1247738210035777682, guid: 437ffe3a4ad95de4596cea896b5c3d17, type: 3}
-  _secondaryWeaponPrefab: {fileID: 1247738210035777682, guid: 437ffe3a4ad95de4596cea896b5c3d17, type: 3}
-  _worldItemSprite: {fileID: 0}
+  _weaponPrefab: {fileID: 7401909469059623903, guid: 437ffe3a4ad95de4596cea896b5c3d17, type: 3}
+  _secondaryWeaponPrefab: {fileID: 7401909469059623903, guid: 437ffe3a4ad95de4596cea896b5c3d17, type: 3}
+  _worldItemSprite: {fileID: 3484287900037411390, guid: 098ad49204c6a974bb450e24646ef919, type: 3}
   _damagePerShot: 18
   _fireRate: 0.25
   _projectileSpeed: 22
@@ -35,4 +35,11 @@ MonoBehaviour:
   _idleDelay: 1.75
   _overheatCooldown: 2.5
   _overheatRecoveryRatio: 0.4
+  _weaponRecoilDistance: 0.08
+  _weaponRecoilAngle: 5
+  _weaponRecoilRecoverySpeed: 16
+  _aimRecoilKick: 4
+  _maxAimRecoil: 12
+  _aimRecoilRecoverySpeed: 18
+  _playerPushForce: 2.2
   _projectilePrefab: {fileID: 9102070951830155043, guid: 347d28477b1d0e145a5f8823b90cc682, type: 3}

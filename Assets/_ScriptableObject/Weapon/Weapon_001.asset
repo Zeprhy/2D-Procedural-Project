@@ -17,8 +17,11 @@ MonoBehaviour:
   _weaponIcon: {fileID: 0}
   _weight: 6
   weaponHandType: 0
+  _triggerMode: 0
+  _visualConfiguration: 0
   _weaponPrefab: {fileID: 6231095779114141848, guid: 5d7a0c9f4bab1674fad9d0e611b7367f, type: 3}
-  _worldItemSprite: {fileID: 0}
+  _secondaryWeaponPrefab: {fileID: 0}
+  _worldItemSprite: {fileID: 21300000, guid: ed35cca10cfd703479ff228984d4a47c, type: 3}
   _damage: 25
   _attackCooldown: 0.4
   _slashArcAngle: 110

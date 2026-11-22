@@ -23,9 +23,28 @@ public class GunWeaponSO : BaseWeaponSO
     [Range(0.1f, 0.8f)]
     [SerializeField] private float _overheatRecoveryRatio = 0.40f;
 
-    [Header("Prefab Proyektil & VFX")]
+    [Header("Sistem Recoil & Player Push")]
+    [Tooltip("Jarak dorongan mundur visual senjata (lokal) saat menembak")]
+    [SerializeField] private float _weaponRecoilDistance = 0.08f;
+    [Tooltip("Sudut rotasi hentakan visual senjata saat menembak (derajat)")]
+    [SerializeField] private float _weaponRecoilAngle = 5f;
+    [Tooltip("Kecepatan pemulihan visual senjata kembali ke posisi semula")]
+    [SerializeField] private float _weaponRecoilRecoverySpeed = 16f;
+
+    [Tooltip("Penambahan sudut recoil bidikan tangan per tembakan")]
+    [SerializeField] private float _aimRecoilKick = 4f;
+    [Tooltip("Batas maksimum akumulasi recoil bidikan tangan")]
+    [SerializeField] private float _maxAimRecoil = 12f;
+    [Tooltip("Kecepatan pemulihan sudut bidikan kembali normal")]
+    [SerializeField] private float _aimRecoilRecoverySpeed = 18f;
+
+    [Tooltip("Kekuatan dorongan mundur fisik yang diterima pemain saat menembak")]
+    [SerializeField] private float _playerPushForce = 2.2f;
+
+    [Header("Prefab Proyektil")]
     [SerializeField] private GameObject _projectilePrefab;
 
+    // Public Getters
     public float DamagePerShot => _damagePerShot;
     public float FireRate => _fireRate;
     public float ProjectileSpeed => _projectileSpeed;
@@ -42,11 +61,18 @@ public class GunWeaponSO : BaseWeaponSO
     public float OverheatCooldown => _overheatCooldown;
     public float OverheatRecoveryThreshold => _maxHeat * _overheatRecoveryRatio;
 
+    public float WeaponRecoilDistance => _weaponRecoilDistance;
+    public float WeaponRecoilAngle => _weaponRecoilAngle;
+    public float WeaponRecoilRecoverySpeed => _weaponRecoilRecoverySpeed;
+    public float AimRecoilKick => _aimRecoilKick;
+    public float MaxAimRecoil => _maxAimRecoil;
+    public float AimRecoilRecoverySpeed => _aimRecoilRecoverySpeed;
+    public float PlayerPushForce => _playerPushForce;
+
     public GameObject ProjectilePrefab => _projectilePrefab;
 
     private void Reset()
     {
-        // Konfigurasi default otomatis untuk senjata api
         _triggerMode = WeaponTriggerMode.HOLDANDRELEASE;
         _weight = 4f;
     }

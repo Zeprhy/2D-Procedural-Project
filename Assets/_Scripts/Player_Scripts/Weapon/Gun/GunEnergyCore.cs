@@ -1,17 +1,22 @@
 using UnityEngine;
-
+using System;
 
 [DisallowMultipleComponent]
 public class GunEnergyCore : MonoBehaviour
 {
-    // State & Sumber Daya Runtime
-    public GunSystemState CurrentState { get; private set; } = GunSystemState.IDLE;
-    public float CurrentBattery { get; private set; }
-    public float CurrentHeat { get; private set; }
+    public event Action<GunSystemState> OnStateChanged;
+
+    [Header("Status Runtime (Monitoring)")]
+    [SerializeField] private GunSystemState _currentState = GunSystemState.IDLE;
+    [SerializeField] private float _currentBattery;
+    [SerializeField] private float _currentHeat;
+
+    public GunSystemState CurrentState => _currentState;
+    public float CurrentBattery => _currentBattery;
+    public float CurrentHeat => _currentHeat;
     public float MaxBattery { get; private set; } = 100f;
     public float MaxHeat { get; private set; } = 100f;
 
-    // Parameter Internal dari GunWeaponSO
     private float _batteryCostPerShot = 10f;
     private float _batteryRegenRate = 25f;
     private float _heatPerShot = 15f;
@@ -20,17 +25,12 @@ public class GunEnergyCore : MonoBehaviour
     private float _overheatCooldown = 2.5f;
     private float _overheatRecoveryThreshold = 40f;
 
-    // Timers & Triggers Tracking
     private float _idleTimer;
     private float _overheatTimer;
     private bool _isRightTriggerHeld;
     private bool _isLeftTriggerHeld;
-
     private bool _isInitialized = false;
 
-    /// <summary>
-    /// Diinisialisasi oleh WeaponEquipmentManager saat Dual Pistol dipasang
-    /// </summary>
     public void InitializeCore(GunWeaponSO config)
     {
         if (config == null) return;
@@ -46,9 +46,10 @@ public class GunEnergyCore : MonoBehaviour
         _overheatCooldown = config.OverheatCooldown;
         _overheatRecoveryThreshold = config.OverheatRecoveryThreshold;
 
-        CurrentBattery = MaxBattery;
-        CurrentHeat = 0f;
-        CurrentState = GunSystemState.IDLE;
+        _currentBattery = MaxBattery;
+        _currentHeat = 0f;
+        
+        SetState(GunSystemState.IDLE);
 
         _isRightTriggerHeld = false;
         _isLeftTriggerHeld = false;
@@ -57,16 +58,15 @@ public class GunEnergyCore : MonoBehaviour
         _isInitialized = true;
     }
 
-    /// <summary>
-    /// Direset saat Dual Pistol dilepas/di-drop
-    /// </summary>
     public void ResetSystem()
     {
-        CurrentBattery = MaxBattery;
-        CurrentHeat = 0f;
-        CurrentState = GunSystemState.IDLE;
+        _currentBattery = MaxBattery;
+        _currentHeat = 0f;
+        SetState(GunSystemState.IDLE);
         _isRightTriggerHeld = false;
         _isLeftTriggerHeld = false;
+        _overheatTimer = 0f;
+        _idleTimer = _idleDelay;
         _isInitialized = false;
     }
 
@@ -74,30 +74,31 @@ public class GunEnergyCore : MonoBehaviour
     {
         if (!_isInitialized) return;
 
-        
+        UpdateTimersAndStates();
+        ProcessResourceRegeneration();
     }
 
-    private void UpdateTimerAndStates()
+    private void UpdateTimersAndStates()
     {
-        if (CurrentState == GunSystemState.OVERHEAT)
+        if (_currentState == GunSystemState.OVERHEAT)
         {
-            if (_overheatTimer > 0)
+            if (_overheatTimer > 0f)
                 _overheatTimer -= Time.deltaTime;
 
-            if (_overheatTimer <= 0f && CurrentHeat <= _overheatRecoveryThreshold)
+            if (_overheatTimer <= 0f && _currentHeat <= _overheatRecoveryThreshold)
             {
-                CurrentState = (_isRightTriggerHeld || _isLeftTriggerHeld) ? GunSystemState.FIGHT : GunSystemState.IDLE;
-                _idleTimer = 0f;
+                bool anyTriggerHeld = _isRightTriggerHeld || _isLeftTriggerHeld;
+                SetState(anyTriggerHeld ? GunSystemState.FIGHT : GunSystemState.IDLE);
+                _idleTimer = anyTriggerHeld ? 0f : _idleDelay;
             }
-
             return;
         }
 
-        bool anyTriggerHeld = _isRightTriggerHeld || _isLeftTriggerHeld;
+        bool isAnyTriggerHeld = _isRightTriggerHeld || _isLeftTriggerHeld;
 
-        if (anyTriggerHeld)
+        if (isAnyTriggerHeld)
         {
-            CurrentState = GunSystemState.FIGHT;
+            SetState(GunSystemState.FIGHT);
             _idleTimer = 0f;
         }
         else
@@ -105,23 +106,37 @@ public class GunEnergyCore : MonoBehaviour
             if (_idleTimer < _idleDelay)
             {
                 _idleTimer += Time.deltaTime;
-                CurrentState = GunSystemState.FIGHT;
+                SetState(GunSystemState.FIGHT);
             }
             else
-                CurrentState = GunSystemState.IDLE;
-        }     
+            {
+                SetState(GunSystemState.IDLE);
+            }
+        }
     }
 
     private void ProcessResourceRegeneration()
     {
-        if (CurrentHeat > 0f)
-            CurrentHeat = Mathf.MoveTowards(CurrentHeat, 0f, _heatDissipationRate * Time.deltaTime);
-        
-        if (CurrentState == GunSystemState.IDLE && CurrentBattery < MaxBattery)
-            CurrentBattery = Mathf.MoveTowards(CurrentBattery, MaxBattery, _batteryRegenRate * Time.deltaTime);
+        bool anyTriggerHeld = _isRightTriggerHeld || _isLeftTriggerHeld;
+        bool canDissipateHeat = (_currentState == GunSystemState.OVERHEAT) || (!anyTriggerHeld);
+
+        if (canDissipateHeat && _currentHeat > 0f)
+        {
+            _currentHeat = Mathf.MoveTowards(_currentHeat, 0f, _heatDissipationRate * Time.deltaTime);
+        }
+
+        if (_currentState == GunSystemState.IDLE && _currentBattery < MaxBattery)
+        {
+            _currentBattery = Mathf.MoveTowards(_currentBattery, MaxBattery, _batteryRegenRate * Time.deltaTime);
+        }
     }
 
-    #region Trigger Event Notifications (Single Authority from Controllers)
+    private void SetState(GunSystemState newState)
+    {
+        if (_currentState == newState) return;
+        _currentState = newState;
+        OnStateChanged?.Invoke(_currentState);
+    }
 
     public void NotifyTriggerState(bool isRightHand, bool isHeld)
     {
@@ -134,35 +149,26 @@ public class GunEnergyCore : MonoBehaviour
         }
     }
 
-    #endregion
-
-    #region Atomic consumption API
-
-    /// <summary>
-    /// Memvalidasi dan mengeksekusi konsumsi energi tembakan secara atomik
-    /// Mengembalikan true HANYA jika tembakan diizinkan dan resource berhasil dipotong
-    /// </summary>
-    
-    public bool TryConsumeShoot()
+    public bool TryConsumeShot()
     {
         if (!_isInitialized) return false;
-        if (CurrentState == GunSystemState.OVERHEAT) return false;
-        if (CurrentBattery < _batteryCostPerShot) return false;
 
-        CurrentBattery = Mathf.Max(0f, CurrentBattery - _batteryCostPerShot);
-        CurrentHeat = Mathf.Min(MaxHeat, CurrentHeat + _heatPerShot);
+        if (_currentState == GunSystemState.OVERHEAT)
+            return false;
 
-        if (CurrentHeat >= MaxHeat)
+        if (_currentBattery < _batteryCostPerShot)
+            return false;
+
+        _currentBattery = Mathf.Max(0f, _currentBattery - _batteryCostPerShot);
+        _currentHeat = Mathf.Min(MaxHeat, _currentHeat + _heatPerShot);
+
+        if (_currentHeat >= MaxHeat)
         {
-            CurrentState = GunSystemState.OVERHEAT;
+            SetState(GunSystemState.OVERHEAT);
             _overheatTimer = _overheatCooldown;
         }
-
 
         _idleTimer = 0f;
         return true;
     }
-
-    #endregion
-
 }

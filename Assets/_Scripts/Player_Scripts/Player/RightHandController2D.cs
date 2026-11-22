@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class RightHandController2D : MonoBehaviour
 {
-    [Header("Referensi Input")]
+     [Header("Referensi Input")]
     [SerializeField] private PlayerAimTracker2D _aimTracker;
 
     [Header("Referensi Tubuh")]
@@ -55,10 +55,7 @@ public class RightHandController2D : MonoBehaviour
 
         float facingDir = _gfxTransform != null ? Mathf.Sign(_gfxTransform.localScale.x) : 1f;
 
-        // 1. Pemrosesan Input Berdasarkan Mode Trigger Senjata (PressOnly vs HoldAndRelease)
         ProcessRightTriggerInput();
-
-        // 2. Kontrol Prosedural Lengan & Bidikan
         if (_aimTracker.IsAimingRight)
         {
             Vector2 toMouse = _aimTracker.MouseWorldPosition - _rightShoulderPivot.position;
@@ -71,7 +68,8 @@ public class RightHandController2D : MonoBehaviour
             _currentAimAngle = ProceduralArmMath.UpdateAimAngle(
                 toMouse, facingDir, _minAimAngle, _maxAimAngle, _aimLagTime, ref _angleVelocity, _currentAimAngle);
 
-            float rad = _currentAimAngle * Mathf.Deg2Rad;
+            float recoilOffset = (_equippedWeapon is GunLogic gun) ? gun.CurrentAimRecoil : 0f;
+            float rad = (_currentAimAngle + recoilOffset) * Mathf.Deg2Rad;
             
             Vector3 targetOffset = new Vector3(Mathf.Cos(rad) * _currentSpringReach * facingDir, Mathf.Sin(rad) * _currentSpringReach, 0f);
             Vector3 desiredHandPos = _rightShoulderPivot.position + targetOffset;
@@ -113,7 +111,7 @@ public class RightHandController2D : MonoBehaviour
                 _equippedWeapon.TriggerAttack(gameObject);
             }
         }
-        // JALUR 2: RANGED / HOLD AND RELEASE (Tahan Picu, Tembak Saat Dilepas)
+       
         else if (triggerMode == WeaponTriggerMode.HOLDANDRELEASE)
         {
             if (Input.GetMouseButtonDown(0))
