@@ -18,7 +18,6 @@ public abstract class WeaponLogic : MonoBehaviour
     [Tooltip("Prefab teks angka damage yang melayang")]
     [SerializeField] protected DamagePopUp2D _damageTextPrefab;
 
-    // State Umum Weapon
     public BaseWeaponSO WeaponData => _weaponData;
     public bool IsAttacking { get; protected set; }
 
@@ -48,34 +47,20 @@ public abstract class WeaponLogic : MonoBehaviour
         _weaponData = data;
     }
 
-    /// <summary>
-    /// Titik masuk aktivasi serangan umum
-    /// </summary>
     public abstract void TriggerAttack(GameObject owner);
 
-    #region Trigger Lifecycle API (Restored & Synchronized)
+    #region Trigger Lifecycle API
 
-    /// <summary>
-    /// Klik awal (Button Down): Melee langsung menyerang di frame 1, GunLogic mengabaikannya untuk release-to-fire
-    /// </summary>
     public virtual void OnTriggerDown(GameObject owner)
     {
         _currentOwner = owner;
-        TriggerAttack(owner); // Perbaikan Melee: Eksekusi langsung saat tombol ditekan
     }
 
-    /// <summary>
-    /// Ditahan (Button Held): Melee terus mengulang serangan saat cooldown selesai
-    /// </summary>
     public virtual void OnTriggerHeld(GameObject owner)
     {
         _currentOwner = owner;
-        TriggerAttack(owner);
     }
 
-    /// <summary>
-    /// Dilepas (Button Up): Senjata api menggunakan ini untuk menembak
-    /// </summary>
     public virtual void OnTriggerUp(GameObject owner)
     {
         _currentOwner = owner;

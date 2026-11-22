@@ -30,15 +30,6 @@ public class OffHandController2D : MonoBehaviour
     [SerializeField] private float _springStiffness = 140f;
     [SerializeField] private float _springDamping = 14f;
 
-    [Header("Inersia Idle (Biar Nggak Kaku)")]
-    [SerializeField] private float _idleSmoothTime = 0.10f;
-    [SerializeField] private float _idleSwayStiffness = 60f;
-    [SerializeField] private float _idleSwayDamping = 8f;
-    [SerializeField] private float _idleSwayInfluence = 4f;
-    [SerializeField] private float _idleMaxSway = 20f;
-
-    private Vector3 _prevShoulderPos;
-    private float _idleSway, _idleSwayVel;
     private float _currentReach = 0.35f;
     private float _reachVelocity;
     private Vector3 _currentTargetPos;
@@ -52,15 +43,17 @@ public class OffHandController2D : MonoBehaviour
     {
         if (_aimTracker == null) _aimTracker = GetComponent<PlayerAimTracker2D>();
         if (_lHandTarget != null) _currentTargetPos = _lHandTarget.position;
-        if (_leftShoulderPivot != null) _prevShoulderPos = _leftShoulderPivot.position;
     }
 
     private void LateUpdate()
     {
         if (_aimTracker == null || _leftShoulderPivot == null || _lHandTarget == null) return;
         float facingDir = _gfxTransform != null ? Mathf.Sign(_gfxTransform.localScale.x) : 1f;
-        ProccesLeftTriggerInput();
 
+        // 1. Pemrosesan Input Berdasarkan Mode Trigger Senjata Kiri
+        ProcessLeftTriggerInput();
+
+        // 2. Kontrol Prosedural Lengan & Bidikan Kiri
         if (_aimTracker.IsAimingLeft)
         {
             Vector2 toMouse = _aimTracker.MouseWorldPosition - _leftShoulderPivot.position;
@@ -101,23 +94,49 @@ public class OffHandController2D : MonoBehaviour
         }
     }
 
-    private void ProccesLeftTriggerInput()
+    private void ProcessLeftTriggerInput()
     {
         if (_equippedWeapon == null) return;
-        
-        if (Input.GetMouseButtonDown(1))
-            _equippedWeapon.OnTriggerDown(gameObject);
-        else if (Input.GetMouseButton(1))
-            _equippedWeapon.OnTriggerHeld(gameObject);
 
-        if (Input.GetMouseButtonUp(1))
-            _equippedWeapon.OnTriggerUp(gameObject);
+        BaseWeaponSO weaponData = _equippedWeapon.WeaponData;
+        WeaponTriggerMode triggerMode = (weaponData != null) ? weaponData.TriggerMode : WeaponTriggerMode.HOLDANDRELEASE;
+
+        if (triggerMode == WeaponTriggerMode.PRESSONLY)
+        {
+            if (Input.GetMouseButtonDown(1))
+            {
+                _equippedWeapon.TriggerAttack(gameObject);
+            }
+        }
+        else if (triggerMode == WeaponTriggerMode.HOLDANDRELEASE)
+        {
+            if (Input.GetMouseButtonDown(1))
+            {
+                _equippedWeapon.OnTriggerDown(gameObject);
+            }
+            else if (Input.GetMouseButton(1))
+            {
+                _equippedWeapon.OnTriggerHeld(gameObject);
+            }
+
+            if (Input.GetMouseButtonUp(1))
+            {
+                _equippedWeapon.OnTriggerUp(gameObject);
+            }
+        }
     }
 
-    #region  Weapon Binding API
-    
-    public void SetEquippedWeapon(WeaponLogic weapon) => _equippedWeapon = weapon;
-    public void ClearEquippedWeapon() => _equippedWeapon = null;
+    #region Weapon Binding API
+
+    public void SetEquippedWeapon(WeaponLogic weapon)
+    {
+        _equippedWeapon = weapon;
+    }
+
+    public void ClearEquippedWeapon()
+    {
+        _equippedWeapon = null;
+    }
 
     #endregion
 }

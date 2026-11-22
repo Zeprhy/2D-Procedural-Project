@@ -22,11 +22,15 @@ public abstract class BaseWeaponSO : ScriptableObject
     [SerializeField] private Sprite _weaponIcon;
 
     [Header("Fisika Bobot Senjata")]
-    [SerializeField] private float _weight = 6f;
+    [SerializeField] protected float _weight = 6f;
 
     [Header("Kategori Slot Tangan")]
     [Tooltip("Menentukan apakah senjata menggunakan satu tangan atau mengunci kedua tangan")]
     [SerializeField] private WeaponHandType weaponHandType = WeaponHandType.OneHanded;
+
+    [Header("Mode Input Pelatuk (Trigger Mode)")]
+    [Tooltip("PressOnly untuk Melee (1 klik = 1 tebas), HoldAndRelease untuk Senjata Api")]
+    [SerializeField] protected WeaponTriggerMode _triggerMode = WeaponTriggerMode.PRESSONLY;
 
     [Header("Konfigurasi Visual & Prefab")]
     [Tooltip("Menentukan apakah equipment set menggunakan 1 prefab visual atau 2 prefab terpisah")]
@@ -41,12 +45,13 @@ public abstract class BaseWeaponSO : ScriptableObject
     [Tooltip("Sprite khusus saat senjata tergeletak di tanah (jika kosong, otomatis fallback ke WeaponIcon)")]
     [SerializeField] private Sprite _worldItemSprite;
 
-    // Public Getters (Preserving Existing Serialized Data)
+    // Public Getters
     public string WeaponID => _weaponID;
     public string WeaponName => _weaponName;
     public Sprite WeaponIcon => _weaponIcon;
     public float Weight => _weight;
     public WeaponHandType HandType => weaponHandType;
+    public WeaponTriggerMode TriggerMode => _triggerMode;
     public WeaponVisualConfiguration VisualConfiguration => _visualConfiguration;
 
     public GameObject WeaponPrefab => _weaponPrefab;

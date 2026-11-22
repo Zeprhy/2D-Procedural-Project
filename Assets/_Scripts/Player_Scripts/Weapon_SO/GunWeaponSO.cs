@@ -10,32 +10,22 @@ public class GunWeaponSO : BaseWeaponSO
     [SerializeField] private float _projectileLifetime = 2.5f;
 
     [Header("Sistem Baterai (Energy System)")]
-    [Tooltip("Kapasitas maksimum baterai bersama")]
     [SerializeField] private float _maxBattery = 100f;
-    [Tooltip("Biaya baterai per satu kali tembakan")]
     [SerializeField] private float _batteryCostPerShot = 10f;
-    [Tooltip("Kecepatan pengisian baterai per detik saat Idle")]
     [SerializeField] private float _batteryRegenRate = 25f;
 
     [Header("Sistem Panas (Heat & Overheat)")]
-    [Tooltip("Kapasitas maksimum panas sebelum Overheat")]
     [SerializeField] private float _maxHeat = 100f;
-    [Tooltip("Pertambahan panas per satu kali tembakan")]
     [SerializeField] private float _heatPerShot = 15f;
-    [Tooltip("Kecepatan pendinginan panas per detik")]
     [SerializeField] private float _heatDissipationRate = 20f;
-    [Tooltip("Waktu hening tanpa aksi (detik) sebelum sistem masuk ke mode Idle")]
     [SerializeField] private float _idleDelay = 1.75f;
-    [Tooltip("Durasi minimum penguncian saat terjadi Overheat (detik)")]
     [SerializeField] private float _overheatCooldown = 2.5f;
-    [Tooltip("Persentase panas yang harus dicapai agar senjata pulih dari Overheat (0.4 = 40% dari MaxHeat)")]
     [Range(0.1f, 0.8f)]
     [SerializeField] private float _overheatRecoveryRatio = 0.40f;
 
     [Header("Prefab Proyektil & VFX")]
     [SerializeField] private GameObject _projectilePrefab;
 
-    // Public Getters
     public float DamagePerShot => _damagePerShot;
     public float FireRate => _fireRate;
     public float ProjectileSpeed => _projectileSpeed;
@@ -54,21 +44,22 @@ public class GunWeaponSO : BaseWeaponSO
 
     public GameObject ProjectilePrefab => _projectilePrefab;
 
+    private void Reset()
+    {
+        // Konfigurasi default otomatis untuk senjata api
+        _triggerMode = WeaponTriggerMode.HOLDANDRELEASE;
+        _weight = 4f;
+    }
+
     public override void Activate(GameObject owner, WeaponLogic weaponLogic)
     {
-        if (weaponLogic is GunLogic)
+        if (weaponLogic is GunLogic gunLogic)
         {
-            // GunLogic menggunakan Trigger Lifecycle:
-            // OnTriggerDown -> OnTriggerHeld -> OnTriggerUp.
-            // Penembakan dilakukan ketika trigger dilepas.
-            // Tidak perlu memanggil method tembak dari sini.
+            // gunLogic.PerformShoot(owner, this);
         }
         else
         {
-            Debug.LogWarning(
-                $"<color=yellow>[GunWeaponSO]</color> '{WeaponName}' diaktifkan dengan WeaponLogic yang bukan GunLogic!",
-                weaponLogic
-            );
+            Debug.LogWarning($"<color=yellow>[GunWeaponSO]</color> '{WeaponName}' diaktifkan dengan WeaponLogic yang bukan GunLogic!", weaponLogic);
         }
     }
 }

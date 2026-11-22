@@ -34,15 +34,6 @@ public class RightHandController2D : MonoBehaviour
     [SerializeField] private float _springDamping = 14f;
     [SerializeField] private float _aimLagTime = 0.12f;
 
-    [Header("Inersia Idle (Biar Nggak Kaku)")]
-    [SerializeField] private float _idleSmoothTime = 0.10f;
-    [SerializeField] private float _idleSwayStiffness = 60f;
-    [SerializeField] private float _idleSwayDamping = 8f;
-    [SerializeField] private float _idleSwayInfluence = 4f;
-    [SerializeField] private float _idleMaxSway = 20f;
-
-    private Vector3 _prevShoulderPos;
-    private float _idleSway, _idleSwayVel;
     private float _currentSpringReach = 0.35f;
     private float _reachVelocity;
     private Vector3 _currentHandTargetPos;
@@ -50,14 +41,12 @@ public class RightHandController2D : MonoBehaviour
     private float _currentAimAngle;
     private float _angleVelocity;
 
-    // Getter publik untuk membaca senjata yang sedang terdaftar
     public WeaponLogic EquippedWeapon => _equippedWeapon;
 
     private void Start()
     {
         if (_aimTracker == null) _aimTracker = GetComponent<PlayerAimTracker2D>();
         if (_rHandTarget != null) _currentHandTargetPos = _rHandTarget.position;
-        if (_rightShoulderPivot != null) _prevShoulderPos = _rightShoulderPivot.position;
     }
 
     private void LateUpdate()
@@ -65,32 +54,31 @@ public class RightHandController2D : MonoBehaviour
         if (_aimTracker == null || _rightShoulderPivot == null || _rHandTarget == null) return;
 
         float facingDir = _gfxTransform != null ? Mathf.Sign(_gfxTransform.localScale.x) : 1f;
+
+        // 1. Pemrosesan Input Berdasarkan Mode Trigger Senjata (PressOnly vs HoldAndRelease)
         ProcessRightTriggerInput();
 
+        // 2. Kontrol Prosedural Lengan & Bidikan
         if (_aimTracker.IsAimingRight)
         {
             Vector2 toMouse = _aimTracker.MouseWorldPosition - _rightShoulderPivot.position;
             float distanceToMouse = toMouse.magnitude;
 
-            // Hitung Jarak Pegas:
             _currentSpringReach = ProceduralArmMath.UpdateSpringReach(
                 distanceToMouse, _mouseNearDist, _mouseFarDist, _minReach, _maxReach, 
                 _springStiffness, _springDamping, ref _reachVelocity, _currentSpringReach, Time.deltaTime);
 
-            // Hitung Sudut Bidik:
             _currentAimAngle = ProceduralArmMath.UpdateAimAngle(
                 toMouse, facingDir, _minAimAngle, _maxAimAngle, _aimLagTime, ref _angleVelocity, _currentAimAngle);
 
             float rad = _currentAimAngle * Mathf.Deg2Rad;
             
-            // Posisi Target
             Vector3 targetOffset = new Vector3(Mathf.Cos(rad) * _currentSpringReach * facingDir, Mathf.Sin(rad) * _currentSpringReach, 0f);
             Vector3 desiredHandPos = _rightShoulderPivot.position + targetOffset;
 
             _currentHandTargetPos = Vector3.SmoothDamp(_currentHandTargetPos, desiredHandPos, ref _handVelocity, 0.04f);
             _rHandTarget.position = _currentHandTargetPos;
 
-            // Rotasi Pedang Menghadap Target
             float straightPercent = Mathf.InverseLerp(_minReach, _maxReach, _currentSpringReach);
             float effectiveOffset = Mathf.Lerp(_handAngleOffset, _handAngleOffset * 0.2f, straightPercent);
             float worldAimAngle = _currentAimAngle * facingDir;
@@ -115,26 +103,46 @@ public class RightHandController2D : MonoBehaviour
     {
         if (_equippedWeapon == null) return;
 
-        if (Input.GetMouseButtonDown(0))
-            _equippedWeapon.OnTriggerDown(gameObject);
-        else if (Input.GetMouseButtonDown(0))
-            _equippedWeapon.OnTriggerHeld(gameObject);
+        BaseWeaponSO weaponData = _equippedWeapon.WeaponData;
+        WeaponTriggerMode triggerMode = (weaponData != null) ? weaponData.TriggerMode : WeaponTriggerMode.PRESSONLY;
 
-        if (Input.GetMouseButtonUp(0))
-            _equippedWeapon.OnTriggerUp(gameObject);
+        if (triggerMode == WeaponTriggerMode.PRESSONLY)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                _equippedWeapon.TriggerAttack(gameObject);
+            }
+        }
+        // JALUR 2: RANGED / HOLD AND RELEASE (Tahan Picu, Tembak Saat Dilepas)
+        else if (triggerMode == WeaponTriggerMode.HOLDANDRELEASE)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                _equippedWeapon.OnTriggerDown(gameObject);
+            }
+            else if (Input.GetMouseButton(0))
+            {
+                _equippedWeapon.OnTriggerHeld(gameObject);
+            }
+
+            if (Input.GetMouseButtonUp(0))
+            {
+                _equippedWeapon.OnTriggerUp(gameObject);
+            }
+        }
     }
 
     #region Weapon Binding API
 
-    /// <summary>
-    /// Dipanggil oleh WeaponEquipmentManager untuk mendaftarkan senjata yang sedang aktif
-    /// </summary>
-    public void SetEquippedWeapon(WeaponLogic weapon) => _equippedWeapon = weapon;
+    public void SetEquippedWeapon(WeaponLogic weapon)
+    {
+        _equippedWeapon = weapon;
+    }
 
-    /// <summary>
-    /// Mengosongkan referensi senjata saat tangan tidak memegang apapun
-    /// </summary>
-    public void ClearEquippedWeapon() => _equippedWeapon = null;
+    public void ClearEquippedWeapon()
+    {
+        _equippedWeapon = null;
+    }
 
     #endregion
 }

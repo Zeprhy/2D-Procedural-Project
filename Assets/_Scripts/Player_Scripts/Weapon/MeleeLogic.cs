@@ -7,7 +7,8 @@ using _Scripts.Interface;
 public class MeleeLogic : WeaponLogic
 {
     [Header("Pengaturan Damage & Cooldown Melee")]
-    [SerializeField] private float _damageInterval = 0.5f;
+    [Tooltip("Jeda waktu minimum sebelum target yang sama dapat menerima damage kembali di dalam hitbox aktif")]
+    [SerializeField] private float _damageInterval = 0.25f;
     [SerializeField] private LayerMask _targetLayer;
 
     [Header("Weapon Trajectory Tracking (Melee)")]
@@ -36,7 +37,7 @@ public class MeleeLogic : WeaponLogic
     [SerializeField] private float _playerRecoilForce = 3.5f;
 
     private PolygonCollider2D _hitbox;
-    private HashSet<IDamageable> _coolingDownTargets = new HashSet<IDamageable>();
+    private readonly HashSet<IDamageable> _coolingDownTargets = new HashSet<IDamageable>();
 
     // Trajectory Ring Buffer
     private struct TipSample
@@ -56,14 +57,13 @@ public class MeleeLogic : WeaponLogic
     {
         base.Awake();
 
-        // Cari hitbox pada GameObject ini atau pada child
         _hitbox = GetComponent<PolygonCollider2D>();
         if (_hitbox == null)
             _hitbox = GetComponentInChildren<PolygonCollider2D>();
 
         if (_hitbox != null)
         {
-            _hitbox.isTrigger = true; // Wajib Trigger agar OnTriggerEnter2D berjalan
+            _hitbox.isTrigger = true;
             _hitbox.enabled = false;
         }
         else
@@ -73,7 +73,6 @@ public class MeleeLogic : WeaponLogic
 
         if (_weaponTip == null)
         {
-            // Auto-detect Weapon_Tip jika ada di child
             Transform tip = transform.Find("Weapon_Tip");
             if (tip != null) _weaponTip = tip;
             else Debug.LogWarning($"<color=yellow>[MeleeLogic]</color> '_weaponTip' belum dipasang pada '{gameObject.name}'. Menggunakan fallback.", this);
@@ -103,14 +102,12 @@ public class MeleeLogic : WeaponLogic
         {
             _currentOwner = owner;
 
-            // Jika _weaponData terhubung, panggil Activate
             if (_weaponData != null)
             {
                 _weaponData.Activate(owner, this);
             }
             else
             {
-                // Fallback darurat jika _weaponData belum di-assign
                 PerformMeleeSlash(owner, null);
             }
         }
@@ -132,6 +129,7 @@ public class MeleeLogic : WeaponLogic
         _trajectoryBuffer.Clear();
         RecordTrajectorySample();
 
+        // Hitbox tetap aktif sepanjang attack window tanpa terpengaruh penahanan tombol mouse
         float duration = (data != null && data.AttackCooldown > 0f) ? data.AttackCooldown : 0.4f;
         yield return new WaitForSeconds(duration);
 
@@ -141,10 +139,17 @@ public class MeleeLogic : WeaponLogic
         _coolingDownTargets.Clear();
     }
 
+    /// <summary>
+    /// Mengelola jeda damage per-target menggunakan Realtime agar kebal terhadap perlambatan Time.timeScale (Hit Stop)
+    /// </summary>
     private IEnumerator TargetDamageCooldownRoutine(IDamageable victim)
     {
         _coolingDownTargets.Add(victim);
-        yield return new WaitForSeconds(_damageInterval);
+
+        // Menggunakan Realtime agar interval tidak membengkak 20x lipat saat Hit Stop aktif
+        float interval = _damageInterval > 0f ? _damageInterval : 0.2f;
+        yield return new WaitForSecondsRealtime(interval);
+
         _coolingDownTargets.Remove(victim);
     }
 
@@ -157,7 +162,7 @@ public class MeleeLogic : WeaponLogic
         if (target.gameObject == _currentOwner) return;
         if (_currentOwner != null && target.transform.IsChildOf(_currentOwner.transform)) return;
 
-        // 2. Pengecekan Layer (Jika _targetLayer tidak diatur/0, loloskan agar tidak memblokir serangan)
+        // 2. Pengecekan Layer (Loloskan jika _targetLayer bernilai 0 / belum diatur)
         if (_targetLayer.value != 0 && (((1 << target.gameObject.layer) & _targetLayer.value) == 0))
             return;
 
@@ -165,7 +170,7 @@ public class MeleeLogic : WeaponLogic
         IDamageable damageable = target.GetComponentInParent<IDamageable>();
         if (damageable == null) return;
 
-        // 4. Cegah multi-hit dalam 1 ayunan
+        // 4. Cegah damage setiap frame: periksa apakah target masih dalam jeda _damageInterval
         if (_coolingDownTargets.Contains(damageable)) return;
 
         // 5. Titik Kontak Presisi
@@ -228,7 +233,7 @@ public class MeleeLogic : WeaponLogic
                 playerMovement.ApplyMicroRecoil(_playerRecoilForce, hitDirX);
         }
 
-        // 14. Terapkan Damage
+        // 14. Kunci Target Dalam Jeda Realtime & Terapkan Damage
         StartCoroutine(TargetDamageCooldownRoutine(damageable));
         damageable.TakeDamage(finalDamage, knockbackVector);
     }

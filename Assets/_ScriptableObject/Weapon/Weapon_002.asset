@@ -17,6 +17,7 @@ MonoBehaviour:
   _weaponIcon: {fileID: 0}
   _weight: 6
   weaponHandType: 1
+  _triggerMode: 1
   _visualConfiguration: 1
   _weaponPrefab: {fileID: 1247738210035777682, guid: 437ffe3a4ad95de4596cea896b5c3d17, type: 3}
   _secondaryWeaponPrefab: {fileID: 1247738210035777682, guid: 437ffe3a4ad95de4596cea896b5c3d17, type: 3}
