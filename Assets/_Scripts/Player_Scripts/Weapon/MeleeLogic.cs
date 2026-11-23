@@ -18,21 +18,27 @@ public class MeleeLogic : WeaponLogic
     [Header("Weapon Trajectory Tracking (Melee)")]
     [Tooltip("Transform penanda di ujung bilah senjata (Weapon Tip)")]
     [SerializeField] private Transform _weaponTip;
+
     [Tooltip("Jumlah frame sampel untuk menghitung rata-rata kecepatan ujung pedang")]
     [SerializeField] private int _maxTrajectorySamples = 5;
+
     [Tooltip("Jendela waktu maksimal riwayat sampel trajektori (detik)")]
     [SerializeField] private float _maxSampleTimeWindow = 0.08f;
 
     [Header("Critical Hit Conditions (Overhead & Headshot)")]
     [Tooltip("Kecepatan linear minimum ujung senjata untuk memicu Critical")]
     [SerializeField] private float _minSwingSpeedThreshold = 9.0f;
+
     [Tooltip("Kecepatan vertikal ke bawah minimum (Vy negatif)")]
     [SerializeField] private float _minDownwardSpeed = 4.0f;
+
     [Tooltip("Toleransi sudut deviasi terhadap arah bawah mutlak (Vector2.down) dalam derajat")]
     [SerializeField] private float _maxDownwardAngleDeviation = 55.0f;
+
     [Tooltip("Persentase area teratas collider musuh yang dianggap kepala (0.3 = 30% area atas)")]
     [Range(0.1f, 0.5f)]
     [SerializeField] private float _headZoneRatio = 0.30f;
+
     [SerializeField] private float _criticalMultiplier = 2.0f;
 
     [Header("Juicy Effect: Knockback & Recoil (Melee)")]
@@ -55,6 +61,7 @@ public class MeleeLogic : WeaponLogic
             Time = time;
         }
     }
+
     private readonly Queue<TipSample> _trajectoryBuffer = new Queue<TipSample>();
 
     protected override void Awake()
@@ -62,6 +69,7 @@ public class MeleeLogic : WeaponLogic
         base.Awake();
 
         _hitbox = GetComponent<PolygonCollider2D>();
+
         if (_hitbox == null)
             _hitbox = GetComponentInChildren<PolygonCollider2D>();
 
@@ -78,12 +86,15 @@ public class MeleeLogic : WeaponLogic
         if (_weaponTip == null)
         {
             Transform tip = transform.Find("Weapon_Tip");
-            if (tip != null) _weaponTip = tip;
-            else Debug.LogWarning($"<color=yellow>[MeleeLogic]</color> '_weaponTip' belum dipasang pada '{gameObject.name}'. Menggunakan fallback.", this);
+
+            if (tip != null)
+                _weaponTip = tip;
+            else
+                Debug.LogWarning($"<color=yellow>[MeleeLogic]</color> '_weaponTip' belum dipasang pada '{gameObject.name}'. Menggunakan fallback.", this);
         }
 
         if (_trailVFX == null)
-            _trailVFX.GetComponentInChildren<MeleeTrailVFXController>(true);
+            _trailVFX = GetComponentInChildren<MeleeTrailVFXController>(true);
     }
 
     private void Update()
@@ -97,8 +108,15 @@ public class MeleeLogic : WeaponLogic
     protected override void OnDisable()
     {
         base.OnDisable();
+
+        if (_trailVFX != null)
+            _trailVFX.CancelSlash();
+
         IsAttacking = false;
-        if (_hitbox != null) _hitbox.enabled = false;
+
+        if (_hitbox != null)
+            _hitbox.enabled = false;
+
         _trajectoryBuffer.Clear();
         _coolingDownTargets.Clear();
     }
@@ -131,7 +149,9 @@ public class MeleeLogic : WeaponLogic
     private IEnumerator SlashRoutine(MeleeWeaponSO data)
     {
         IsAttacking = true;
-        if (_hitbox != null) _hitbox.enabled = true;
+
+        if (_hitbox != null)
+            _hitbox.enabled = true;
 
         _trajectoryBuffer.Clear();
         RecordTrajectorySample();
@@ -141,11 +161,16 @@ public class MeleeLogic : WeaponLogic
 
         // Hitbox tetap aktif sepanjang attack window tanpa terpengaruh penahanan tombol mouse
         float duration = (data != null && data.AttackCooldown > 0f) ? data.AttackCooldown : 0.4f;
+
         yield return new WaitForSeconds(duration);
 
         IsAttacking = false;
-        if (_hitbox != null) _hitbox.enabled = false;
-        if (_trailVFX != null) _trailVFX.EndSlash();
+
+        if (_hitbox != null)
+            _hitbox.enabled = false;
+
+        if (_trailVFX != null)
+            _trailVFX.EndSlash();
 
         _trajectoryBuffer.Clear();
         _coolingDownTargets.Clear();
@@ -160,12 +185,14 @@ public class MeleeLogic : WeaponLogic
 
         // Menggunakan Realtime agar interval tidak membengkak 20x lipat saat Hit Stop aktif
         float interval = _damageInterval > 0f ? _damageInterval : 0.2f;
+
         yield return new WaitForSecondsRealtime(interval);
 
         _coolingDownTargets.Remove(victim);
     }
 
     private void OnTriggerEnter2D(Collider2D target) => ProcessDamage(target);
+
     private void OnTriggerStay2D(Collider2D target) => ProcessDamage(target);
 
     private void ProcessDamage(Collider2D target)
@@ -185,21 +212,23 @@ public class MeleeLogic : WeaponLogic
         //Cegah damage setiap frame: periksa apakah target masih dalam jeda _damageInterval
         if (_coolingDownTargets.Contains(damageable)) return;
 
-        // Titik Kontak Presisi
+        //Titik Kontak Presisi
         Vector3 contactPoint = CalculateAccurateContactPoint(target);
 
-        // Evaluasi Syarat Trajektori & Head Hit untuk Critical
+        //Evaluasi Syarat Trajektori & Head Hit untuk Critical
         bool isCritical = EvaluateCriticalHit(target, contactPoint);
 
-        // Kalkulasi Damage
+        //Kalkulasi Damage
         float baseDamage = (_weaponData is MeleeWeaponSO melee) ? melee.Damage : 25f;
         float finalDamage = isCritical ? (baseDamage * _criticalMultiplier) : baseDamage;
 
-        // Hitung Arah Benturan
+        //Hitung Arah Benturan
         Vector2 hitDirection = Vector2.right;
+
         if (_currentOwner != null)
         {
             Vector2 toTarget = (target.bounds.center - _currentOwner.transform.position);
+
             if (toTarget.sqrMagnitude > 0.001f)
                 hitDirection = toTarget.normalized;
         }
@@ -215,6 +244,7 @@ public class MeleeLogic : WeaponLogic
 
         //Camera Shake & Zoom Punch
         float weaponWeight = _weaponData != null ? _weaponData.Weight : 6f;
+
         if (CameraFollow2D.Instance != null)
             CameraFollow2D.Instance.TriggerHitImpact(weaponWeight, isCritical);
 
@@ -238,6 +268,7 @@ public class MeleeLogic : WeaponLogic
         if (_currentOwner != null)
         {
             PlatformerMovement playerMovement = _currentOwner.GetComponent<PlatformerMovement>();
+
             if (playerMovement == null)
                 playerMovement = _currentOwner.GetComponentInParent<PlatformerMovement>();
 
@@ -285,6 +316,7 @@ public class MeleeLogic : WeaponLogic
         float bladeLengthSqr = bladeVec.sqrMagnitude;
 
         Vector3 closestPointOnBlade = hiltPos;
+
         if (bladeLengthSqr > 0.0001f)
         {
             float t = Mathf.Clamp01(Vector3.Dot(target.bounds.center - hiltPos, bladeVec) / bladeLengthSqr);
@@ -299,6 +331,7 @@ public class MeleeLogic : WeaponLogic
         if (_trajectoryBuffer.Count < 2) return false;
 
         TipSample[] samples = _trajectoryBuffer.ToArray();
+
         TipSample oldestSample = samples[0];
         TipSample newestSample = samples[samples.Length - 1];
 
@@ -316,6 +349,7 @@ public class MeleeLogic : WeaponLogic
 
         float targetHeight = target.bounds.size.y;
         float headThresholdY = target.bounds.max.y - (targetHeight * _headZoneRatio);
+
         bool isHeadHit = contactPoint.y >= headThresholdY;
 
         return isHeadHit;

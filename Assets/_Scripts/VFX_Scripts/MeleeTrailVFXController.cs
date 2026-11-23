@@ -177,8 +177,8 @@ public class MeleeTrailVFXController : MonoBehaviour
                 this);
         }
 
-        _trail.alignment = TrailAlignment.View;
-        _trail.textureMode = TrailTextureMode.Stretch;
+        _trail.alignment = LineAlignment.View;
+        _trail.textureMode = LineTextureMode.Stretch;
         _trail.numCornerVertices = 4;
         _trail.numCapVertices = 2;
         _trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
