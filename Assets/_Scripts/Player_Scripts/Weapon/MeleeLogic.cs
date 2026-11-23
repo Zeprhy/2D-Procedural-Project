@@ -11,6 +11,10 @@ public class MeleeLogic : WeaponLogic
     [SerializeField] private float _damageInterval = 0.25f;
     [SerializeField] private LayerMask _targetLayer;
 
+    [Header("Sword Swing Trail (Opsional)")]
+    [Tooltip("Pengontrol Trail Renderer untuk efek ayunan pedang. Jika kosong, akan dicari otomatis pada GameObject ini atau child.")]
+    [SerializeField] private MeleeTrailVFXController _trailVFX;
+
     [Header("Weapon Trajectory Tracking (Melee)")]
     [Tooltip("Transform penanda di ujung bilah senjata (Weapon Tip)")]
     [SerializeField] private Transform _weaponTip;
@@ -77,6 +81,9 @@ public class MeleeLogic : WeaponLogic
             if (tip != null) _weaponTip = tip;
             else Debug.LogWarning($"<color=yellow>[MeleeLogic]</color> '_weaponTip' belum dipasang pada '{gameObject.name}'. Menggunakan fallback.", this);
         }
+
+        if (_trailVFX == null)
+            _trailVFX.GetComponentInChildren<MeleeTrailVFXController>(true);
     }
 
     private void Update()
@@ -129,12 +136,17 @@ public class MeleeLogic : WeaponLogic
         _trajectoryBuffer.Clear();
         RecordTrajectorySample();
 
+        if (_trailVFX != null)
+            _trailVFX.BeginSlash();
+
         // Hitbox tetap aktif sepanjang attack window tanpa terpengaruh penahanan tombol mouse
         float duration = (data != null && data.AttackCooldown > 0f) ? data.AttackCooldown : 0.4f;
         yield return new WaitForSeconds(duration);
 
         IsAttacking = false;
         if (_hitbox != null) _hitbox.enabled = false;
+        if (_trailVFX != null) _trailVFX.EndSlash();
+
         _trajectoryBuffer.Clear();
         _coolingDownTargets.Clear();
     }
@@ -158,32 +170,32 @@ public class MeleeLogic : WeaponLogic
 
     private void ProcessDamage(Collider2D target)
     {
-        // 1. Abaikan collider pemilik sendiri
+        //Abaikan collider pemilik sendiri
         if (target.gameObject == _currentOwner) return;
         if (_currentOwner != null && target.transform.IsChildOf(_currentOwner.transform)) return;
 
-        // 2. Pengecekan Layer (Loloskan jika _targetLayer bernilai 0 / belum diatur)
+        //Pengecekan Layer (Loloskan jika _targetLayer bernilai 0 / belum diatur)
         if (_targetLayer.value != 0 && (((1 << target.gameObject.layer) & _targetLayer.value) == 0))
             return;
 
-        // 3. Cari komponen IDamageable
+        //Cari komponen IDamageable
         IDamageable damageable = target.GetComponentInParent<IDamageable>();
         if (damageable == null) return;
 
-        // 4. Cegah damage setiap frame: periksa apakah target masih dalam jeda _damageInterval
+        //Cegah damage setiap frame: periksa apakah target masih dalam jeda _damageInterval
         if (_coolingDownTargets.Contains(damageable)) return;
 
-        // 5. Titik Kontak Presisi
+        // Titik Kontak Presisi
         Vector3 contactPoint = CalculateAccurateContactPoint(target);
 
-        // 6. Evaluasi Syarat Trajektori & Head Hit untuk Critical
+        // Evaluasi Syarat Trajektori & Head Hit untuk Critical
         bool isCritical = EvaluateCriticalHit(target, contactPoint);
 
-        // 7. Kalkulasi Damage
+        // Kalkulasi Damage
         float baseDamage = (_weaponData is MeleeWeaponSO melee) ? melee.Damage : 25f;
         float finalDamage = isCritical ? (baseDamage * _criticalMultiplier) : baseDamage;
 
-        // 8. Hitung Arah Benturan
+        // Hitung Arah Benturan
         Vector2 hitDirection = Vector2.right;
         if (_currentOwner != null)
         {
@@ -192,7 +204,7 @@ public class MeleeLogic : WeaponLogic
                 hitDirection = toTarget.normalized;
         }
 
-        // 9. Memicu Modular Combat VFX
+        //Memicu Modular Combat VFX
         if (_vfxController != null)
         {
             if (isCritical)
@@ -201,12 +213,12 @@ public class MeleeLogic : WeaponLogic
                 _vfxController.PlayNormalHit(contactPoint, hitDirection);
         }
 
-        // 10. Camera Shake & Zoom Punch
+        //Camera Shake & Zoom Punch
         float weaponWeight = _weaponData != null ? _weaponData.Weight : 6f;
         if (CameraFollow2D.Instance != null)
             CameraFollow2D.Instance.TriggerHitImpact(weaponWeight, isCritical);
 
-        // 11. Floating Damage Text
+        //Floating Damage Text
         if (_damageTextPrefab != null)
         {
             Vector3 spawnPos = contactPoint + new Vector3(Random.Range(-0.2f, 0.2f), 0.5f, 0);
@@ -214,10 +226,10 @@ public class MeleeLogic : WeaponLogic
             popUp.Setup(finalDamage, isCritical);
         }
 
-        // 12. Hit Stop
+        //Hit Stop
         RequestHitStop(isCritical);
 
-        // 13. Knockback Musuh & Recoil Player
+        //Knockback Musuh & Recoil Player
         float hitDirX = Mathf.Sign(hitDirection.x);
         float weightMod = Mathf.Max(0.5f, weaponWeight / 5f);
         float finalKnockback = _baseKnockbackForce * weightMod * (isCritical ? 1.4f : 1.0f);
@@ -233,7 +245,7 @@ public class MeleeLogic : WeaponLogic
                 playerMovement.ApplyMicroRecoil(_playerRecoilForce, hitDirX);
         }
 
-        // 14. Kunci Target Dalam Jeda Realtime & Terapkan Damage
+        //Kunci Target Dalam Jeda Realtime & Terapkan Damage
         StartCoroutine(TargetDamageCooldownRoutine(damageable));
         damageable.TakeDamage(finalDamage, knockbackVector);
     }
