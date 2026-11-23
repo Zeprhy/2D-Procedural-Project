@@ -1,211 +1,176 @@
-
 using UnityEngine;
 
 [DisallowMultipleComponent]
 public class PelvisController2DRebuild : MonoBehaviour
 {
-    [Header("Referensi Karakter")]
-    [Tooltip("Player Root yang memiliki Rigidbody2D")]
-    [SerializeField] private Transform _playerRoot;
-
+    [Header("Referensi Karakter & Input")]
     [SerializeField] private PlatformerMovement _movement;
     [SerializeField] private ProceduralBipedLeg2DRebuild _legController;
-
     [SerializeField] private Transform _facingReference;
 
-    [Header("Local Position")]
-    [Tooltip("Batas maksimum offset animasi pelvis dari posisi awal")]
-    [SerializeField] private float _maxPelvisDeviation = 0.12f;
+    [Header("Walk Bobbing (Lokal)")]
+    [Tooltip("Intensitas naik-turun pinggul saat berjalan")]
+    [SerializeField] private float _walkBobAmount = 0.055f;
+    [SerializeField] private float _smoothFollowSpeed = 14f;
 
-    [Tooltip("Kecepatan transisi posisi pelvis")]
-    [SerializeField] private float _smoothFollowSpeed = 12f;
+    [Header("Idle Breathing (Nafas Halus)")]
+    [Tooltip("Intensitas nafas halus saat karakter diam")]
+    [SerializeField] private float _idleBreathingAmount = 0.02f;
+    [Tooltip("Frekuensi nafas per detik")]
+    [SerializeField] private float _breathingFrequency = 2.4f;
 
-    [Header("Walk Bobbing")]
-    [SerializeField] private float _walkBobAmount = 0.06f;
+    [Header("Landing Impact Dip")]
+    [Tooltip("Penurunan posisi lokal pinggul sesaat saat menyerap benturan pendaratan")]
+    [SerializeField] private float _maxLandingDip = 0.075f;
+    [Tooltip("Kecepatan pemulihan dari landing dip (detik)")]
+    [SerializeField] private float _landingDipRecoverySpeed = 0.20f;
 
-    [Header("Idle Breathing")]
-    [SerializeField] private float _idleBreathingAmount = 0.025f;
+    [Header("Forward Walking Lean (Kemiringan Tubuh)")]
+    [Tooltip("Sudut kecondongan tubuh ke depan saat berjalan (derajat)")]
+    [SerializeField] private float _forwardWalkLeanAngle = 4.5f;
 
-    [SerializeField] private float _breathingFrequency = 2.5f;
-
-    [Header("Body Tilt & Inersia")]
-    [SerializeField] private float _maxTiltAngle = 6f;
-
-    [SerializeField] private float _tiltSensitivity = 0.8f;
-
+    [Header("Body Tilt & Inersia Pengereman")]
+    [Tooltip("Sudut kemiringan maksimum saat akselerasi/rem (derajat)")]
+    [SerializeField] private float _maxInertiaTilt = 6f;
+    [Tooltip("Sensitivitas terhadap inersia horizontal")]
+    [SerializeField] private float _tiltSensitivity = 0.7f;
     [SerializeField] private float _tiltRecoverySpeed = 10f;
 
-    // Initial pose
+    // Baseline Local Space (100% Bebas dari Bug Melayang)
     private Vector3 _initialLocalPosition;
     private Quaternion _initialLocalRotation;
 
-    // Runtime animation
-    private float _currentVerticalOffset;
-    private float _currentTiltAngle;
-    private float _lastVelocityX;
+    private float _currentLandingDip = 0f;
+    private float _currentTotalTilt = 0f;
+    private float _lastVelocityX = 0f;
+    private bool _wasGroundedLastFrame = true;
 
     private void Awake()
     {
-        // Simpan posisi dan rotasi asli B_Body_Main.
         _initialLocalPosition = transform.localPosition;
         _initialLocalRotation = transform.localRotation;
 
-        // Ambil referensi Player Root.
-        if (_playerRoot == null)
-            _playerRoot = transform.root;
+        Transform root = transform.root;
 
-        if (_movement == null && _playerRoot != null)
-            _movement = _playerRoot.GetComponent<PlatformerMovement>();
+        if (_movement == null && root != null)
+            _movement = root.GetComponent<PlatformerMovement>();
 
-        if (_legController == null && _playerRoot != null)
-        {
-            _legController =
-                _playerRoot.GetComponent<ProceduralBipedLeg2DRebuild>();
-        }
+        if (_legController == null && root != null)
+            _legController = root.GetComponent<ProceduralBipedLeg2DRebuild>();
 
-        if (_facingReference == null)
-            _facingReference = _playerRoot;
-
-        // Hindari lonjakan akselerasi saat pertama kali dijalankan.
-        if (_movement != null && _movement.PlayerRigidbody != null)
-        {
-            _lastVelocityX =
-                _movement.PlayerRigidbody.linearVelocity.x;
-        }
+        if (_facingReference == null && root != null)
+            _facingReference = root;
     }
 
     private void LateUpdate()
     {
-        if (_playerRoot == null || _movement == null)
-            return;
-
+        UpdateLandingImpactDetection();
         UpdatePelvisPosition();
         UpdatePelvisRotation();
     }
 
+    #region Safe Movement Queries
+
+    private Vector2 GetVelocity()
+    {
+        if (_movement != null && _movement.PlayerRigidbody != null)
+            return _movement.PlayerRigidbody.linearVelocity;
+
+        return Vector2.zero;
+    }
+
+    private bool GetIsGrounded()
+    {
+        return _movement != null && _movement.IsGrounded;
+    }
+
+    #endregion
+
+    private void UpdateLandingImpactDetection()
+    {
+        bool isGroundedNow = GetIsGrounded();
+
+        // Deteksi transisi eksklusif dari AIRBORNE -> GROUNDED
+        if (!_wasGroundedLastFrame && isGroundedNow)
+        {
+            _currentLandingDip = _maxLandingDip;
+        }
+
+        _wasGroundedLastFrame = isGroundedNow;
+    }
+
     private void UpdatePelvisPosition()
     {
-        float targetOffset = 0f;
+        float verticalOffset = 0f;
+        Vector2 vel = GetVelocity();
 
-        bool isGrounded = _movement.IsGrounded;
-
-        if (isGrounded)
+        if (GetIsGrounded())
         {
-            float velocityX = 0f;
+            float vx = Mathf.Abs(vel.x);
 
-            if (_movement.PlayerRigidbody != null)
+            if (vx > 0.12f || (_movement != null && _movement.IsMoving))
             {
-                velocityX = Mathf.Abs(
-                    _movement.PlayerRigidbody.linearVelocity.x
-                );
-            }
-
-            bool isWalking =
-                velocityX > 0.12f || _movement.IsMoving;
-
-            if (isWalking)
-            {
-                // Sinkronisasi dengan siklus langkah kaki.
-                float cycle = _legController != null
-                    ? _legController.WalkCycleNormalized
-                    : Time.time * 3f;
-
-                targetOffset =
-                    -Mathf.Abs(
-                        Mathf.Sin(cycle * Mathf.PI * 2f)
-                    ) * _walkBobAmount;
+                // WALK BOBBING: Sinkron dengan ayunan langkah kaki
+                float cycle = _legController != null ? _legController.WalkCycleNormalized : (Time.time * 6f);
+                verticalOffset = -Mathf.Abs(Mathf.Sin(cycle * Mathf.PI * 2f)) * _walkBobAmount;
             }
             else
             {
-                // Idle breathing.
-                targetOffset =
-                    Mathf.Sin(Time.time * _breathingFrequency)
-                    * _idleBreathingAmount;
+                // IDLE BREATHING
+                verticalOffset = Mathf.Sin(Time.time * _breathingFrequency) * _idleBreathingAmount;
             }
         }
-        else
+
+        // Pemulihan Landing Dip secara elastis
+        if (_currentLandingDip > 0f)
         {
-            // Tidak melakukan bobbing saat airborne.
-            targetOffset = 0f;
+            float recoveryRate = (_maxLandingDip / Mathf.Max(0.05f, _landingDipRecoverySpeed)) * Time.deltaTime;
+            _currentLandingDip = Mathf.MoveTowards(_currentLandingDip, 0f, recoveryRate);
         }
 
-        // Batasi pergerakan dari posisi awal.
-        targetOffset = Mathf.Clamp(
-            targetOffset,
-            -_maxPelvisDeviation,
-            _maxPelvisDeviation
-        );
+        // Terapkan posisi lokal murni
+        float targetLocalY = _initialLocalPosition.y + verticalOffset - _currentLandingDip;
+        Vector3 targetPos = new Vector3(_initialLocalPosition.x, targetLocalY, _initialLocalPosition.z);
 
-        // Smooth transition.
-        _currentVerticalOffset = Mathf.Lerp(
-            _currentVerticalOffset,
-            targetOffset,
-            Time.deltaTime * _smoothFollowSpeed
-        );
-
-        transform.localPosition =
-            _initialLocalPosition +
-            Vector3.up * _currentVerticalOffset;
+        transform.localPosition = Vector3.Lerp(transform.localPosition, targetPos, Time.deltaTime * _smoothFollowSpeed);
     }
 
     private void UpdatePelvisRotation()
     {
-        if (_movement == null ||
-            _movement.PlayerRigidbody == null)
-            return;
+        Vector2 vel = GetVelocity();
+        float currentVx = vel.x;
+        float facingDir = _facingReference != null ? Mathf.Sign(_facingReference.lossyScale.x) : 1f;
 
-        float currentVelocityX =
-            _movement.PlayerRigidbody.linearVelocity.x;
-
-        float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
-
-        float accelerationX =
-            (currentVelocityX - _lastVelocityX) / deltaTime;
-
-        _lastVelocityX = currentVelocityX;
-
-        float facingDir = 1f;
-
-        if (_facingReference != null)
+        // 1. FORWARD WALKING LEAN (Arah Benar Hadap Kanan & Kiri)
+        float forwardLeanAngle = 0f;
+        if (GetIsGrounded() && Mathf.Abs(currentVx) > 0.15f)
         {
-            facingDir = Mathf.Sign(
-                _facingReference.lossyScale.x
-            );
+            float maxSpeed = (_movement != null) ? Mathf.Max(1f, _movement.Speed) : 6f;
+            float speedRatio = Mathf.Clamp01(Mathf.Abs(currentVx) / maxSpeed);
 
-            if (facingDir == 0f)
-                facingDir = 1f;
+            // Tentukan apakah bergerak maju atau mundur relatif terhadap arah hadap
+            float moveDirX = Mathf.Sign(currentVx);
+            float forwardMultiplier = (moveDirX == facingDir) ? 1f : -0.7f; // Condong ke belakang jika berjalan mundur
+
+            forwardLeanAngle = speedRatio * _forwardWalkLeanAngle * forwardMultiplier;
         }
 
-        float targetTilt = 0f;
+        // 2. ACCELERATION / BRAKING INERTIA TILT
+        float accelX = (currentVx - _lastVelocityX) / Mathf.Max(0.0001f, Time.deltaTime);
+        _lastVelocityX = currentVx;
 
-        // Body lean saat bergerak.
-        if (Mathf.Abs(currentVelocityX) > 0.15f)
+        float inertiaTilt = 0f;
+        if (Mathf.Abs(accelX) > 2.0f)
         {
-            targetTilt =
-                -Mathf.Sign(currentVelocityX) *
-                Mathf.Clamp(
-                    Mathf.Abs(currentVelocityX) * _tiltSensitivity,
-                    0f,
-                    _maxTiltAngle
-                );
-        }
-        // Respons ketika mengerem.
-        else if (Mathf.Abs(accelerationX) > 2f)
-        {
-            targetTilt = Mathf.Sign(accelerationX) * 3f;
+            float localAccel = accelX * facingDir;
+            inertiaTilt = Mathf.Clamp((localAccel / 12f) * _tiltSensitivity * _maxInertiaTilt, -_maxInertiaTilt, _maxInertiaTilt);
         }
 
-        targetTilt *= facingDir;
+        // 3. SINTESIS ROTASI TUNGGAL RELATIF TERHADAP BIND-POSE
+        float targetTotalTilt = forwardLeanAngle + inertiaTilt;
+        _currentTotalTilt = Mathf.Lerp(_currentTotalTilt, targetTotalTilt, Time.deltaTime * _tiltRecoverySpeed);
 
-        _currentTiltAngle = Mathf.Lerp(
-            _currentTiltAngle,
-            targetTilt,
-            Time.deltaTime * _tiltRecoverySpeed
-        );
-
-        // Rotasi relatif terhadap bind pose awal.
-        transform.localRotation =
-            _initialLocalRotation *
-            Quaternion.Euler(0f, 0f, _currentTiltAngle);
+        // Rotasi lokal -Z memiringkan tubuh ke depan pada rig lokal
+        transform.localRotation = _initialLocalRotation * Quaternion.Euler(0f, 0f, -_currentTotalTilt);
     }
 }

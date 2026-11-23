@@ -58,11 +58,19 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
     [Tooltip("Jarak raycast tanah")]
     [SerializeField] private float _raycastDistance = 2.5f;
     [Tooltip("Kecepatan penyesuaian rotasi telapak kaki ke normal permukaan tanah")]
-    [SerializeField] private float _footAlignSpeed = 15f; // <--- PERBAIKAN ERROR CS0103
+    [SerializeField] private float _footAlignSpeed = 15f;
+
+    [Header("Smart Stairs & Landing Tuning")]
+    [Tooltip("Jarak probe maju ke depan saat raycast pertama membentur dinding anak tangga")]
+    [SerializeField] private float _stairTreadProbeDistance = 0.14f;
+    [Tooltip("Toleransi jarak kontak tanah saat pendaratan")]
+    [SerializeField] private float _landingContactTolerance = 0.02f;
+    [Tooltip("Kecepatan peredaman pendaratan menuju tanah")]
+    [SerializeField] private float _landingDampSpeed = 16f;
 
     // State Tracking
     public LocomotionState CurrentState { get; private set; } = LocomotionState.Idle;
-    public float WalkCycleNormalized { get; private set; } // Diekspos untuk sinkronisasi Pelvis Bob
+    public float WalkCycleNormalized { get; private set; }
 
     private Vector3 _leftPlantedPos;
     private Vector3 _rightPlantedPos;
@@ -80,6 +88,7 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
     private ActiveLeg _activeSwingLeg = ActiveLeg.None;
     private float _stepProgress = 0f;
     private bool _lastSteppedLeft = false;
+    private float _landingTimeoutTimer = 0f;
 
     private bool _leftIsGrounded;
     private bool _rightIsGrounded;
@@ -117,6 +126,30 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         ApplyTargetTransforms();
     }
 
+    #region Safe Movement Queries (Null-Safe)
+
+    private Vector2 GetVelocity()
+    {
+        if (_movement != null && _movement.PlayerRigidbody != null)
+            return _movement.PlayerRigidbody.linearVelocity;
+
+        return Vector2.zero;
+    }
+
+    private bool GetIsGrounded()
+    {
+        return _movement != null && _movement.IsGrounded;
+    }
+
+    private bool GetIsMoving()
+    {
+        if (_movement == null) return false;
+        float vx = Mathf.Abs(GetVelocity().x);
+        return vx > 0.12f || _movement.IsMoving;
+    }
+
+    #endregion
+
     private void InitializeStance()
     {
         if (_leftTarget == null || _rightTarget == null || _leftHome == null || _rightHome == null)
@@ -139,37 +172,51 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
 
     private void UpdateLocomotionState()
     {
-        // PERBAIKAN ERROR CS1061: Murni membaca IsGrounded bawaan PlatformerMovement
-        bool isTrulyAirborne = (_movement != null) && !_movement.IsGrounded;
+        bool isAirborne = !GetIsGrounded();
 
-        if (isTrulyAirborne)
+        // 1. TRANSISI MENUJU AIRBORNE
+        if (isAirborne)
         {
-            CurrentState = LocomotionState.Airborne;
-            return;
-        }
-
-        if (CurrentState == LocomotionState.Airborne && _movement.IsGrounded)
-        {
-            CurrentState = LocomotionState.Landing;
-            _stepProgress = 0f;
-            return;
-        }
-
-        if (CurrentState == LocomotionState.Landing)
-        {
-            _stepProgress += Time.deltaTime * 12f;
-            if (_stepProgress >= 1f)
+            if (CurrentState != LocomotionState.Airborne)
             {
-                CurrentState = LocomotionState.Idle;
+                CurrentState = LocomotionState.Airborne;
+                _activeSwingLeg = ActiveLeg.None;
                 _stepProgress = 0f;
             }
             return;
         }
 
-        float vx = _movement != null ? Mathf.Abs(_movement.PlayerRigidbody.linearVelocity.x) : 0f;
-        bool isMoving = vx > 0.12f || (_movement != null && _movement.IsMoving);
+        // 2. TRANSISI DARI AIRBORNE MENUJU LANDING
+        if (CurrentState == LocomotionState.Airborne && GetIsGrounded())
+        {
+            CurrentState = LocomotionState.Landing;
+            _landingTimeoutTimer = 0.35f; // Failsafe timeout 0.35 detik
+            return;
+        }
 
-        CurrentState = isMoving ? LocomotionState.Walking : LocomotionState.Idle;
+        // 3. EVALUASI STATE LANDING BERBASIS JARAK KONTAK
+        if (CurrentState == LocomotionState.Landing)
+        {
+            _landingTimeoutTimer -= Time.deltaTime;
+
+            SnapFootToGround(true, out Vector3 targetLeft, out _);
+            SnapFootToGround(false, out Vector3 targetRight, out _);
+
+            float distLeft = Vector3.Distance(_leftPlantedPos, targetLeft);
+            float distRight = Vector3.Distance(_rightPlantedPos, targetRight);
+
+            bool feetGrounded = distLeft <= _landingContactTolerance && distRight <= _landingContactTolerance;
+            bool timedOut = _landingTimeoutTimer <= 0f;
+
+            if (feetGrounded || timedOut)
+            {
+                CurrentState = GetIsMoving() ? LocomotionState.Walking : LocomotionState.Idle;
+            }
+            return;
+        }
+
+        // 4. EVALUASI WALKING VS IDLE
+        CurrentState = GetIsMoving() ? LocomotionState.Walking : LocomotionState.Idle;
     }
 
     private void ProcessCurrentState()
@@ -205,10 +252,10 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         SnapFootToGround(true, out Vector3 targetLeft, out Quaternion rotLeft);
         SnapFootToGround(false, out Vector3 targetRight, out Quaternion rotRight);
 
-        _leftPlantedPos = Vector3.Lerp(_leftPlantedPos, targetLeft, Time.deltaTime * 8f);
+        _leftPlantedPos = Vector3.Lerp(_leftPlantedPos, targetLeft, Time.deltaTime * 10f);
         _leftPlantedRot = Quaternion.Slerp(_leftPlantedRot, rotLeft, Time.deltaTime * _footAlignSpeed);
 
-        _rightPlantedPos = Vector3.Lerp(_rightPlantedPos, targetRight, Time.deltaTime * 8f);
+        _rightPlantedPos = Vector3.Lerp(_rightPlantedPos, targetRight, Time.deltaTime * 10f);
         _rightPlantedRot = Quaternion.Slerp(_rightPlantedRot, rotRight, Time.deltaTime * _footAlignSpeed);
 
         WalkCycleNormalized = 0f;
@@ -222,7 +269,8 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
             return;
         }
 
-        float vx = _movement.PlayerRigidbody.linearVelocity.x;
+        Vector2 vel = GetVelocity();
+        float vx = vel.x;
         float facingDir = _facingReference != null ? Mathf.Sign(_facingReference.lossyScale.x) : 1f;
         float moveDir = Mathf.Abs(vx) > 0.1f ? Mathf.Sign(vx) : facingDir;
 
@@ -238,24 +286,16 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         if (!_lastSteppedLeft)
         {
             if (leftDist > dynamicStride * 0.75f)
-            {
                 TriggerStep(true, moveDir, dynamicStride);
-            }
             else if (rightDist > dynamicStride * 0.75f)
-            {
                 TriggerStep(false, moveDir, dynamicStride);
-            }
         }
         else
         {
             if (rightDist > dynamicStride * 0.75f)
-            {
                 TriggerStep(false, moveDir, dynamicStride);
-            }
             else if (leftDist > dynamicStride * 0.75f)
-            {
                 TriggerStep(true, moveDir, dynamicStride);
-            }
         }
     }
 
@@ -268,19 +308,47 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         float sideOffset = (isLeft ? -1f : 1f) * (_stanceWidth * 0.5f);
         float predictedX = bodyPos.x + sideOffset + (moveDir * stride);
 
+        // SMART STAIR TREAD SCANNER
         Vector3 rayOrigin = new Vector3(predictedX, bodyPos.y + 1.2f, bodyPos.z);
         RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, _raycastDistance + 1.2f, _groundLayer);
 
         Vector3 landingPos;
         Quaternion landingRot = Quaternion.identity;
+        bool validTreadFound = false;
 
-        if (hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) <= _maxSlopeAngle)
+        if (hit.collider != null)
         {
-            landingPos = new Vector3(hit.point.x, hit.point.y + _footYOffset, bodyPos.z);
-            if (hit.normal.y > 0.3f)
+            float slopeAngle = Vector2.Angle(hit.normal, Vector2.up);
+
+            // Permukaan normal datar atau lereng landai
+            if (slopeAngle <= _maxSlopeAngle)
             {
-                float angle = Mathf.Atan2(hit.normal.y, hit.normal.x) * Mathf.Rad2Deg - 90f;
-                landingRot = Quaternion.Euler(0f, 0f, Mathf.Clamp(angle, -_maxSlopeAngle, _maxSlopeAngle));
+                landingPos = new Vector3(hit.point.x, hit.point.y + _footYOffset, bodyPos.z);
+                landingRot = CalculateFootRotation(hit.normal);
+                validTreadFound = true;
+            }
+            // Raycast mengenai dinding vertikal anak tangga (stair riser)
+            else if (slopeAngle > 50f)
+            {
+                Vector3 forwardProbeOrigin = new Vector3(predictedX + (moveDir * _stairTreadProbeDistance), bodyPos.y + 1.5f, bodyPos.z);
+                RaycastHit2D hitTread = Physics2D.Raycast(forwardProbeOrigin, Vector2.down, _raycastDistance + 1.5f, _groundLayer);
+
+                if (hitTread.collider != null && Vector2.Angle(hitTread.normal, Vector2.up) <= _maxSlopeAngle)
+                {
+                    landingPos = new Vector3(hitTread.point.x, hitTread.point.y + _footYOffset, bodyPos.z);
+                    landingRot = CalculateFootRotation(hitTread.normal);
+                    validTreadFound = true;
+                }
+                else
+                {
+                    float fallbackY = isLeft ? _rightPlantedPos.y : _leftPlantedPos.y;
+                    landingPos = new Vector3(predictedX, fallbackY, bodyPos.z);
+                }
+            }
+            else
+            {
+                float fallbackY = isLeft ? _rightPlantedPos.y : _leftPlantedPos.y;
+                landingPos = new Vector3(predictedX, fallbackY, bodyPos.z);
             }
         }
         else
@@ -290,7 +358,7 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         }
 
         Transform hip = isLeft ? _leftHip : _rightHip;
-        landingPos = ClampHyperextension(landingPos, hip);
+        landingPos = ClampHyperextensionSmart(landingPos, hip, validTreadFound);
 
         if (isLeft)
         {
@@ -312,20 +380,25 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         float t = Mathf.Clamp01(_stepProgress);
         float smoothT = Mathf.SmoothStep(0f, 1f, t);
 
-        // PERBAIKAN ERROR CS1061 (BARIS 325):
-        // Deteksi elevasi tangga otomatis berdasarkan perbedaan tinggi landing target vs start
         float targetY = (_activeSwingLeg == ActiveLeg.Left) ? _leftSwingTarget.y : _rightSwingTarget.y;
         float startY = (_activeSwingLeg == ActiveLeg.Left) ? _leftSwingStart.y : _rightSwingStart.y;
         float elevationDelta = targetY - startY;
 
+        // ASYMMETRIC FORWARD-BIASED SWING ARC
         float currentStepHeight = _stepHeight;
-        if (elevationDelta > 0.08f)
+        float arcFactor;
+
+        if (elevationDelta > 0.06f)
         {
-            // Jika melangkah naik tangga/undakan, naikkan lengkungan ayunan secara adaptif
-            currentStepHeight += Mathf.Clamp(elevationDelta * 0.5f, 0f, 0.2f);
+            currentStepHeight += Mathf.Clamp(elevationDelta * 0.5f, 0f, 0.22f);
+            arcFactor = Mathf.Sin(Mathf.Pow(t, 0.7f) * Mathf.PI);
+        }
+        else
+        {
+            arcFactor = Mathf.Sin(t * Mathf.PI);
         }
 
-        float arcY = Mathf.Sin(t * Mathf.PI) * currentStepHeight;
+        float arcY = arcFactor * currentStepHeight;
 
         if (_activeSwingLeg == ActiveLeg.Left)
         {
@@ -370,10 +443,10 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         Vector3 targetLeft = _leftHome != null ? _leftHome.position : transform.position;
         Vector3 targetRight = _rightHome != null ? _rightHome.position : transform.position;
 
-        float vy = _movement != null ? _movement.PlayerRigidbody.linearVelocity.y : 0f;
-        if (vy < -2.5f)
+        float vy = GetVelocity().y;
+        if (vy < -2.0f)
         {
-            float legDrop = Mathf.Clamp(-vy * 0.03f, 0f, 0.2f);
+            float legDrop = Mathf.Clamp(-vy * 0.025f, 0f, 0.18f);
             targetLeft.y -= legDrop;
             targetRight.y -= legDrop;
         }
@@ -392,11 +465,12 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         SnapFootToGround(true, out Vector3 targetLeft, out Quaternion rotLeft);
         SnapFootToGround(false, out Vector3 targetRight, out Quaternion rotRight);
 
-        _leftPlantedPos = Vector3.Lerp(_leftPlantedPos, targetLeft, Time.deltaTime * 18f);
-        _rightPlantedPos = Vector3.Lerp(_rightPlantedPos, targetRight, Time.deltaTime * 18f);
+        // Interpolasi teredam stabil menuju permukaan tanah
+        _leftPlantedPos = Vector3.MoveTowards(_leftPlantedPos, targetLeft, _landingDampSpeed * Time.deltaTime);
+        _rightPlantedPos = Vector3.MoveTowards(_rightPlantedPos, targetRight, _landingDampSpeed * Time.deltaTime);
 
-        _leftPlantedRot = Quaternion.Slerp(_leftPlantedRot, rotLeft, Time.deltaTime * 18f);
-        _rightPlantedRot = Quaternion.Slerp(_rightPlantedRot, rotRight, Time.deltaTime * 18f);
+        _leftPlantedRot = Quaternion.Slerp(_leftPlantedRot, rotLeft, Time.deltaTime * 20f);
+        _rightPlantedRot = Quaternion.Slerp(_rightPlantedRot, rotRight, Time.deltaTime * 20f);
     }
 
     private Vector3 CalculateIdealStancePos(bool isLeft)
@@ -423,12 +497,10 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         if (hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) <= _maxSlopeAngle)
         {
             Vector3 point = new Vector3(hit.point.x, hit.point.y + _footYOffset, origin.z);
-            point = ClampHyperextension(point, hip);
+            point = ClampHyperextensionSmart(point, hip, true);
 
             groundPos = point;
-
-            float angle = Mathf.Atan2(hit.normal.y, hit.normal.x) * Mathf.Rad2Deg - 90f;
-            groundRot = Quaternion.Euler(0f, 0f, Mathf.Clamp(angle, -_maxSlopeAngle, _maxSlopeAngle));
+            groundRot = CalculateFootRotation(hit.normal);
             return true;
         }
 
@@ -437,16 +509,54 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         return false;
     }
 
-    private Vector3 ClampHyperextension(Vector3 targetPos, Transform hip)
+    private Quaternion CalculateFootRotation(Vector2 normal)
+    {
+        if (normal.y > 0.3f)
+        {
+            float angle = Mathf.Atan2(normal.y, normal.x) * Mathf.Rad2Deg - 90f;
+            return Quaternion.Euler(0f, 0f, Mathf.Clamp(angle, -_maxSlopeAngle, _maxSlopeAngle));
+        }
+        return Quaternion.identity;
+    }
+
+    /// <summary>
+    /// REFINED: Melakukan validasi raycast ulang di koordinat X hasil koreksi agar kaki tidak melayang dari tanah
+    /// </summary>
+    private Vector3 ClampHyperextensionSmart(Vector3 targetPos, Transform hip, bool hasValidGround)
     {
         if (hip == null) return targetPos;
 
         Vector3 hipToTarget = targetPos - hip.position;
         float dist = hipToTarget.magnitude;
 
-        if (dist > _maxLegReach && dist > 0.001f)
+        float allowedReach = hasValidGround ? (_maxLegReach * 1.15f) : _maxLegReach;
+
+        if (dist > allowedReach && dist > 0.001f)
         {
-            return hip.position + (hipToTarget / dist) * _maxLegReach;
+            Vector3 clampedDir = hipToTarget / dist;
+            float clampedX = hip.position.x + (clampedDir.x * allowedReach);
+
+            if (hasValidGround)
+            {
+                // RE-VALIDASI TANAH DI KOORDINAT X BARU
+                Vector3 reRayOrigin = new Vector3(clampedX, hip.position.y + 0.5f, targetPos.z);
+                RaycastHit2D reHit = Physics2D.Raycast(reRayOrigin, Vector2.down, _raycastDistance + 1f, _groundLayer);
+
+                if (reHit.collider != null && Vector2.Angle(reHit.normal, Vector2.up) <= _maxSlopeAngle)
+                {
+                    float newGroundY = reHit.point.y + _footYOffset;
+                    Vector3 reValidatedPos = new Vector3(clampedX, newGroundY, targetPos.z);
+
+                    // Pastikan titik tanah baru ini masih dalam jangkauan aman paha
+                    if ((reValidatedPos - hip.position).magnitude <= allowedReach * 1.08f)
+                    {
+                        return reValidatedPos;
+                    }
+                }
+            }
+
+            // Fallback: pembatasan radial murni jika re-raycast tidak menemukan tanah (misal tepi jurang)
+            return hip.position + clampedDir * allowedReach;
         }
 
         return targetPos;
