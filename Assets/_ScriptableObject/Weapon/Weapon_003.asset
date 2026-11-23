@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ebd2ebe9be52ef148a3eb27c464bc2f0, type: 3}
+  m_Name: Weapon_003
+  m_EditorClassIdentifier: Assembly-CSharp::MeleeWeaponSO
+  _weaponID: Weapon_001
+  _weaponName: Sword
+  _weaponIcon: {fileID: 0}
+  _weight: 12
+  weaponHandType: 0
+  _triggerMode: 0
+  _visualConfiguration: 0
+  _weaponPrefab: {fileID: 6231095779114141848, guid: 5db1e247d0fc942418e8df66ec6ef7b4, type: 3}
+  _secondaryWeaponPrefab: {fileID: 6231095779114141848, guid: 5db1e247d0fc942418e8df66ec6ef7b4, type: 3}
+  _worldItemSprite: {fileID: 21300000, guid: a51e0c5e729483f49bb802ac23d6bec5, type: 3}
+  _damage: 25
+  _attackCooldown: 0.4
+  _slashArcAngle: 110
