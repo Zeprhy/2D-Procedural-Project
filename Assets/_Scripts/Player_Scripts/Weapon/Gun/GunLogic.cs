@@ -50,12 +50,33 @@ public class GunLogic : WeaponLogic
     private Coroutine _energyBurstRoutine;
     private PlayerAimTracker2D _aimTracker;
 
+    // Shared un-mirrored world anchor untuk burst VFX (bebas negative scale)
+    private static Transform _sharedVfxAnchor;
+
+    private static Transform EnsureVfxAnchor()
+    {
+        if (_sharedVfxAnchor == null)
+        {
+            GameObject existing = GameObject.Find("MuzzleVFX_Anchor");
+            if (existing != null)
+            {
+                _sharedVfxAnchor = existing.transform;
+            }
+            else
+            {
+                GameObject anchorObj = new GameObject("MuzzleVFX_Anchor");
+                _sharedVfxAnchor = anchorObj.transform;
+            }
+        }
+        return _sharedVfxAnchor;
+    }
+
     protected override void Awake()
     {
         base.Awake();
         _aimTracker = FindFirstObjectByType<PlayerAimTracker2D>();
 
-        // 1. Auto-find Fire Point yang presisi (Cari Fire_Point di dalam Muzzle_Point)
+        // 1. Auto-find Fire Point yang presisi
         if (_firePoint == null)
         {
             Transform preciseFirePoint = transform.Find("Muzzle_Point/Fire_Point");
@@ -90,18 +111,30 @@ public class GunLogic : WeaponLogic
             if (burstObj != null) _energyBurstRenderer = burstObj.GetComponent<SpriteRenderer>();
         }
 
-        if (_energyBurstRenderer != null)
-            _energyBurstRenderer.enabled = false;
-
         // 4. Auto-find Particle System Sparks Accent
         if (_energyBurstSparks == null)
         {
-            Transform sparksObj = transform.Find("Muzzle_Point/Energy_Sparks");
+            Transform sparksObj = transform.Find("Muzzle_Point/Energy_Spark");
             if (sparksObj != null) _energyBurstSparks = sparksObj.GetComponent<ParticleSystem>();
             else if (_energyBurstRenderer != null) _energyBurstSparks = _energyBurstRenderer.GetComponent<ParticleSystem>();
         }
 
-        // 5. Auto-find Overheat Steam ParticleSystem
+        // 5. Reparent Energy_Burst & Energy_Spark ke shared world anchor un-mirrored (Opsi B)
+        Transform vfxAnchor = EnsureVfxAnchor();
+
+        if (_energyBurstRenderer != null)
+        {
+            _energyBurstRenderer.transform.SetParent(vfxAnchor, true);
+            _energyBurstRenderer.flipX = false;
+            _energyBurstRenderer.enabled = false;
+        }
+
+        if (_energyBurstSparks != null)
+        {
+            _energyBurstSparks.transform.SetParent(vfxAnchor, true);
+        }
+
+        // 6. Auto-find Overheat Steam ParticleSystem (Tetap di hierarki senjata, tidak di-reparent)
         if (_overheatSteamParticles == null)
         {
             Transform steamObj = transform.Find("Muzzle_Point/Overheat_Steam");
@@ -127,7 +160,6 @@ public class GunLogic : WeaponLogic
         if (_energyCore != null)
             _energyCore.OnStateChanged -= HandleEnergyStateChanged;
 
-        // Bersihkan state visual moncong seketika saat dinonaktifkan
         if (_energyBurstRoutine != null)
         {
             StopCoroutine(_energyBurstRoutine);
@@ -144,6 +176,16 @@ public class GunLogic : WeaponLogic
             _overheatSteamParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
         CurrentAimRecoil = 0f;
+    }
+
+    private void OnDestroy()
+    {
+        // Bersihkan objek reparented agar tidak meninggalkan sampah di MuzzleVFX_Anchor saat senjata di-destroy
+        if (_energyBurstRenderer != null)
+            Destroy(_energyBurstRenderer.gameObject);
+
+        if (_energyBurstSparks != null)
+            Destroy(_energyBurstSparks.gameObject);
     }
 
     public void InitializeGun(GunEnergyCore core, bool isRightHand)
@@ -237,18 +279,14 @@ public class GunLogic : WeaponLogic
         if (gunData == null || gunData.ProjectilePrefab == null || FirePoint == null || _energyCore == null)
             return;
 
-        // 1. Validasi Baterai & Overheat Atomik
         if (!_energyCore.TryConsumeShot()) return;
 
-        // 2. Spawn Proyektil Energi
         Vector2 fireDir = SpawnEnergyProjectile(gunData, owner);
 
-        // 3. Picu Feedback Tembakan
         ApplyWeaponRecoil(gunData);
         ApplyAimRecoil(gunData);
         ApplyPlayerPush(gunData, owner, fireDir);
 
-        // 4. Picu Directional Burst Sprite & Particle Accent
         TriggerDirectionalBurst(fireDir);
 
         _fireCooldownTimer = gunData.FireRate;
@@ -346,13 +384,11 @@ public class GunLogic : WeaponLogic
 
     private void TriggerDirectionalBurst(Vector2 fireDirection)
     {
-        // 1. AKSI UTAMA: DIRECTIONAL BURST SPRITE
+        // 1. AKSI UTAMA: DIRECTIONAL BURST SPRITE (Un-mirrored di MuzzleVFX_Anchor)
         if (_energyBurstRenderer != null)
         {
-            // Pastikan posisi letupan terkunci presisi di titik FirePoint (tidak mengambang ke kursor)
             _energyBurstRenderer.transform.position = FirePoint.position;
 
-            // Pilih variasi sprite acak jika tersedia
             if (_energyBurstSprites != null && _energyBurstSprites.Length > 0)
             {
                 Sprite randomSprite = _energyBurstSprites[Random.Range(0, _energyBurstSprites.Length)];
@@ -360,25 +396,23 @@ public class GunLogic : WeaponLogic
                     _energyBurstRenderer.sprite = randomSprite;
             }
 
-            // Orientasi semburan memanjang mengikuti sudut tembakan peluru
             float angle = Mathf.Atan2(fireDirection.y, fireDirection.x) * Mathf.Rad2Deg;
             _energyBurstRenderer.transform.rotation = Quaternion.Euler(0f, 0f, angle);
             _energyBurstRenderer.transform.localScale = _energyBurstScale;
+            _energyBurstRenderer.flipX = false;
 
-            // Hentikan coroutine sebelumnya jika tembakan terjadi sangat cepat (rapid fire safe)
             if (_energyBurstRoutine != null)
                 StopCoroutine(_energyBurstRoutine);
 
             _energyBurstRoutine = StartCoroutine(EnergyBurstRoutine());
         }
 
-        // 2. AKSEN TAMBAHAN: PARTICLE SPARKS
+        // 2. AKSEN TAMBAHAN: PARTICLE SPARKS (Un-mirrored di MuzzleVFX_Anchor)
         if (_energyBurstSparks != null)
         {
             _energyBurstSparks.transform.position = FirePoint.position;
             float angle = Mathf.Atan2(fireDirection.y, fireDirection.x) * Mathf.Rad2Deg;
             _energyBurstSparks.transform.rotation = Quaternion.Euler(0f, 0f, angle);
-
             _energyBurstSparks.Play();
         }
     }
