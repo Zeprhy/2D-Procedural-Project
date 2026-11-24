@@ -1,91 +1,101 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 [DisallowMultipleComponent]
 public class MeleeTrailVFXController : MonoBehaviour
 {
-    [Header("Referensi Trail")]
-    [Tooltip("TrailRenderer yang mengikuti ujung pedang. Jika kosong, akan dicari dari GameObject ini atau child.")]
+    [Header("Referensi")]
+    [Tooltip("TrailRenderer ujung pedang. Kosong = auto-find di GameObject ini / child.")]
     [SerializeField] private TrailRenderer _trail;
+    [Tooltip("Transform ujung bilah (Weapon_Tip). Kosong = auto-find child bernama Weapon_Tip.")]
+    [SerializeField] private Transform _swingTip;
 
     [Header("Opsi Kontrol")]
-    [Tooltip("Jika aktif, komponen akan menerapkan parameter appearance di bawah ke TrailRenderer saat Awake.")]
+    [Tooltip("Terapkan parameter appearance ke TrailRenderer saat resolusi pertama.")]
     [SerializeField] private bool _applySettingsOnAwake = true;
-
-    [Tooltip("Jika true, segmen lama dibersihkan saat slash baru dimulai agar tidak muncul garis dari posisi sebelumnya.")]
+    [Tooltip("Bersihkan segmen lama saat slash baru dimulai agar tidak ada garis nyambung.")]
     [SerializeField] private bool _clearOnBegin = true;
 
-    [Header("Trail Appearance")]
-    [Tooltip("Durasi hidup segmen trail dalam detik.")]
-    [SerializeField] private float _trailTime = 0.18f;
-
-    [Tooltip("Lebar trail pada titik terbaru / kepala trail.")]
-    [SerializeField] private float _startWidth = 0.12f;
-
-    [Tooltip("Lebar trail pada ujung paling tua / ekor trail.")]
-    [SerializeField] private float _endWidth = 0.02f;
-
-    [Tooltip("Gradient warna trail. Jika kosong, gradient default akan dipakai.")]
+    [Header("Layer 1 - Sword Trail")]
+    [SerializeField] private float _trailTime = 0.22f;
+    [SerializeField] private float _startWidth = 0.14f;
+    [SerializeField] private float _endWidth = 0.01f;
+    [Tooltip("Jika aktif, lebar trail memakai kurva (nilai kurva = lebar world units).")]
+    [SerializeField] private bool _useWidthCurve = true;
+    [SerializeField] private AnimationCurve _widthCurve = new AnimationCurve(
+        new Keyframe(0f, 0.05f),
+        new Keyframe(0.18f, 0.16f),
+        new Keyframe(0.55f, 0.10f),
+        new Keyframe(1f, 0f));
+    [Tooltip("Gradient warna trail. Kosong = gradient default.")]
     [SerializeField] private Gradient _colorGradient;
-
-    [Tooltip("Material TrailRenderer. Gunakan material transparent yang kompatibel dengan 2D.")]
+    [Tooltip("Material trail. Kosong = pertahankan material existing.")]
     [SerializeField] private Material _trailMaterial;
-
-    [Tooltip("Jarak minimum pergerakan sebelum vertex baru dibuat.")]
-    [SerializeField] private float _minVertexDistance = 0.01f;
-
-    [Tooltip("Status emitting awal. Sebaiknya false; trail hanya menyala saat serangan.")]
+    [SerializeField] private float _minVertexDistance = 0.008f;
     [SerializeField] private bool _initialEmitting = false;
 
+    [Header("Layer 2 - Ghost Slash Arc")]
+    [SerializeField] private bool _enableGhostSlash = true;
+    [Tooltip("Prefab opsional (SpriteRenderer + GhostSlashArc). Kosong = instance prosedural.")]
+    [SerializeField] private GameObject _ghostSlashPrefab;
+    [Tooltip("Sprite slash opsional. Kosong = sprite prosedural built-in (atau sprite bawaan prefab).")]
+    [SerializeField] private Sprite _ghostSlashSprite;
+    [Tooltip("Material untuk instance prosedural. Kosong = Sprites/Default.")]
+    [SerializeField] private Material _arcMaterial;
+    [SerializeField] private Color _arcColor = new Color(1f, 1f, 1f, 0.85f);
+    [SerializeField] private float _arcLifetime = 0.28f;
+    [Tooltip("Panjang chord minimum agar arc muncul (mencegah arc pada swing kecil).")]
+    [SerializeField] private float _minArcChord = 0.25f;
+    [SerializeField] private float _arcScalePerUnit = 1.15f;
+    [SerializeField] private float _arcMinScale = 0.6f;
+    [SerializeField] private float _arcMaxScale = 2.4f;
+    [SerializeField] private float _arcThicknessRatio = 1f;
+    [Tooltip("Centang jika lengkungan crescent terbalik terhadap arah ayunan.")]
+    [SerializeField] private bool _invertArcFlip = false;
+    [SerializeField] private AnimationCurve _arcAlphaCurve = new AnimationCurve(
+        new Keyframe(0f, 0.9f),
+        new Keyframe(0.35f, 0.55f),
+        new Keyframe(1f, 0f));
+    [SerializeField] private AnimationCurve _arcScaleCurve = new AnimationCurve(
+        new Keyframe(0f, 0.85f),
+        new Keyframe(0.25f, 1f),
+        new Keyframe(1f, 1.08f));
+    [SerializeField] private int _maxSwingSamples = 96;
+    [SerializeField] private float _sampleMinDistance = 0.02f;
+
+    [Header("Layer 3 - Opsional Swing Sparks")]
+    [Tooltip("ParticleSystem opsional (pasang di Weapon_Tip). Kosong = tanpa partikel.")]
+    [SerializeField] private ParticleSystem _swingSparks;
+
     private int _activeSlashCount;
+    private bool _trailWarned;
+    private readonly List<Vector3> _swingSamples = new List<Vector3>(96);
+    private readonly Queue<GhostSlashArc> _arcPool = new Queue<GhostSlashArc>();
+    private readonly List<GhostSlashArc> _activeArcs = new List<GhostSlashArc>();
 
     public bool IsSlashActive => _activeSlashCount > 0;
 
-    private void Reset()
-    {
-        _trail = GetComponent<TrailRenderer>();
-
-        if (_trail == null) _trail = GetComponentInChildren<TrailRenderer>();
-        if (_colorGradient == null)
-            _colorGradient = CreateDefaultGradient();
-    }
+    #region Unity Lifecycle
 
     private void Awake()
     {
-        if (_trail == null)
-            _trail = GetComponent<TrailRenderer>();
+        EnsureTrail();
+        EnsureTip();
 
-        if (_trail == null)
-            _trail = GetComponentInChildren<TrailRenderer>(true);
-
-        if (_trail == null)
+        if (_trail != null)
         {
-            Debug.LogWarning(
-                $"<color=yellow>[MeleeTrailVFXController]</color> TrailRenderer tidak ditemukan pada '{gameObject.name}'. " +
-                "Pastikan TrailRenderer berada pada Weapon_Tip atau child dari weapon root.",
-                this);
-
-            enabled = false;
-            return;
+            _trail.emitting = _initialEmitting;
+            if (!_initialEmitting)
+                _trail.Clear();
         }
-
-        if (_applySettingsOnAwake)
-            ApplyTrailSettings();
-
-        _trail.emitting = _initialEmitting;
-
-        if (!_initialEmitting)
-            _trail.Clear();
     }
 
     private void OnEnable()
     {
+        // FIX BUG: tidak ada GetComponent di sini.
+        // Resolusi referensi hanya lewat EnsureTrail() (lazy + cached + null-safe).
         _activeSlashCount = 0;
-
-        if (_trail == null)
-            _trail.GetComponent<TrailRenderer>();
-        
-        if (_trail == null)
-            _trail.GetComponentInChildren<TrailRenderer>();
+        _swingSamples.Clear();
 
         if (_trail != null)
         {
@@ -97,63 +107,157 @@ public class MeleeTrailVFXController : MonoBehaviour
     private void OnDisable()
     {
         _activeSlashCount = 0;
+        _swingSamples.Clear();
 
         if (_trail != null)
         {
             _trail.emitting = false;
             _trail.Clear();
         }
+
+        if (_swingSparks != null)
+            _swingSparks.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+        ClearActiveArcs();
     }
 
-    private void OnTransformParentChanged() => CancelSlash();
-    
-    /// <summary>
-    /// Dipanggil saat melee slash dimulai.
-    /// </summary>
+    private void OnTransformParentChanged()
+    {
+        // Weapon equip / drop / switch = parent berubah -> batalkan semua efek.
+        CancelSlash();
+    }
+
+    private void LateUpdate()
+    {
+        if (!_enableGhostSlash || _activeSlashCount == 0)
+            return;
+
+        Vector3 p = EnsureTip().position;
+
+        if (_swingSamples.Count > 0 &&
+            (p - _swingSamples[_swingSamples.Count - 1]).sqrMagnitude < (_sampleMinDistance * _sampleMinDistance))
+            return;
+
+        if (_swingSamples.Count >= _maxSwingSamples)
+            return;
+
+        _swingSamples.Add(p);
+    }
+
+    #endregion
+
+    #region Public API (dipanggil MeleeLogic)
+
     public void BeginSlash()
     {
-        if (_trail == null || !_trail.enabled || !_trail.gameObject.activeInHierarchy) return;
+        Transform tip = EnsureTip();
 
-        if (_activeSlashCount == 0 && _clearOnBegin)
-            _trail.Clear();
-
-        _activeSlashCount++;
-        _trail.emitting = true;
-    }
-
-
-    /// <summary>
-    /// Dipanggil saat melee slash selesai.
-    /// Segmen trail yang sudah terbentuk tetap dibiarkan memudar sesuai Trail Time.
-    /// </summary>
-    public void EndSlash()
-    {
-        if (_trail == null)
+        if (_activeSlashCount == 0)
         {
-            _activeSlashCount = 0;
-            return;
+            _swingSamples.Clear();
+            _swingSamples.Add(tip.position);
+
+            if (_swingSparks != null)
+            {
+                _swingSparks.Clear();
+                _swingSparks.Play();
+            }
         }
 
+        _activeSlashCount++;
+
+        if (EnsureTrail())
+        {
+            if (_activeSlashCount == 1 && _clearOnBegin)
+                _trail.Clear();
+
+            _trail.emitting = true;
+        }
+    }
+
+    public void EndSlash()
+    {
         if (_activeSlashCount > 0)
             _activeSlashCount--;
 
-        if (_activeSlashCount == 0)
+        if (_activeSlashCount != 0)
+            return;
+
+        if (_trail != null)
             _trail.emitting = false;
+
+        if (_swingSparks != null)
+            _swingSparks.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+
+        if (_enableGhostSlash)
+            SpawnGhostSlash();
+
+        _swingSamples.Clear();
     }
 
-    /// <summary>
-    /// Dipanggil saat trail harus dihentikan dan dibersihkan segera,
-    /// misalnya ketika weapon disable, weapon switch, atau cancel.
-    /// </summary>
     public void CancelSlash()
     {
         _activeSlashCount = 0;
+        _swingSamples.Clear();
 
-        if (_trail == null) return;
+        if (_trail != null)
+        {
+            _trail.emitting = false;
+            _trail.Clear();
+        }
 
-        _trail.emitting = false;
-        _trail.Clear();
+        if (_swingSparks != null)
+            _swingSparks.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+        ClearActiveArcs();
     }
+
+    #endregion
+
+    #region Resolusi Referensi (lazy, cached, null-safe)
+
+    private bool EnsureTrail()
+    {
+        if (_trail != null)
+            return true;
+
+        _trail = GetComponent<TrailRenderer>();
+
+        if (_trail == null)
+            _trail = GetComponentInChildren<TrailRenderer>(true);
+
+        if (_trail == null)
+        {
+            if (!_trailWarned)
+            {
+                _trailWarned = true;
+                Debug.LogWarning(
+                    $"<color=yellow>[MeleeTrailVFXController]</color> TrailRenderer tidak ditemukan pada '{gameObject.name}'. " +
+                    "Trail dilewati, ghost slash tetap jalan.", this);
+            }
+            return false;
+        }
+
+        if (_applySettingsOnAwake)
+            ApplyTrailSettings();
+
+        return true;
+    }
+
+    private Transform EnsureTip()
+    {
+        if (_swingTip == null)
+            _swingTip = transform.Find("Weapon_Tip");
+
+        if (_swingTip == null)
+            _swingTip = transform;
+
+        return _swingTip;
+    }
+
+    #endregion
+
+    #region Layer 1 - Trail Configuration
 
     private void ApplyTrailSettings()
     {
@@ -162,31 +266,32 @@ public class MeleeTrailVFXController : MonoBehaviour
         _trail.endWidth = Mathf.Max(0.001f, _endWidth);
         _trail.minVertexDistance = Mathf.Max(0.001f, _minVertexDistance);
 
-        if (_colorGradient != null)
-            _trail.colorGradient = _colorGradient;
-        else
-            _trail.colorGradient = CreateDefaultGradient();
+        if (_useWidthCurve && _widthCurve != null && _widthCurve.length > 0)
+            _trail.widthCurve = _widthCurve;
 
-        if (_trailMaterial != null )
+        _trail.colorGradient = (_colorGradient != null) ? _colorGradient : CreateDefaultGradient();
+
+        if (_trailMaterial != null)
             _trail.material = _trailMaterial;
         else if (_trail.sharedMaterial == null)
-        {
             Debug.LogWarning(
-                $"<color=yellow>[MeleeTrailVFXController]</color> TrailRenderer pada '{_trail.gameObject.name}' tidak memiliki material. " +
-                "Assign material transparent seperti Sprites/Default atau material 2D lain.",
-                this);
-        }
+                $"<color=yellow>[MeleeTrailVFXController]</color> TrailRenderer pada '{_trail.gameObject.name}' tanpa material. " +
+                "Assign material transparent (Sprites/Default atau sprite shader pipeline Anda).", this);
 
+        // FIX CS0103: enum yang benar adalah LineAlignment / LineTextureMode
         _trail.alignment = LineAlignment.View;
         _trail.textureMode = LineTextureMode.Stretch;
-        _trail.numCornerVertices = 4;
-        _trail.numCapVertices = 2;
+
+        // Polish: lengkungan lebih halus
+        _trail.numCornerVertices = 8;
+        _trail.numCapVertices = 4;
+
         _trail.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         _trail.receiveShadows = false;
     }
 
     private static Gradient CreateDefaultGradient()
-    {   
+    {
         Gradient gradient = new Gradient();
 
         GradientColorKey[] colorKeys = new GradientColorKey[3]
@@ -198,12 +303,140 @@ public class MeleeTrailVFXController : MonoBehaviour
 
         GradientAlphaKey[] alphaKeys = new GradientAlphaKey[3]
         {
-            new GradientAlphaKey (0.9f, 0f),
-            new GradientAlphaKey (0.55f, 0.6f),
-            new GradientAlphaKey (0f, 1f)
+            new GradientAlphaKey(0.95f, 0f),
+            new GradientAlphaKey(0.60f, 0.40f),
+            new GradientAlphaKey(0f, 1f)
         };
 
         gradient.SetKeys(colorKeys, alphaKeys);
         return gradient;
     }
+
+    #endregion
+
+    #region Layer 2 - Ghost Slash Arc
+
+    private void SpawnGhostSlash()
+    {
+        int n = _swingSamples.Count;
+        if (n < 3)
+            return;
+
+        Vector3 first = _swingSamples[0];
+        Vector3 last = _swingSamples[n - 1];
+        Vector3 chord = last - first;
+        chord.z = 0f;
+
+        float chordLen = chord.magnitude;
+        if (chordLen < _minArcChord)
+            return;
+
+        // Tanda arah lengkungan (cw / ccw) dari akumulasi cross product antar segmen
+        float crossSum = 0f;
+        for (int i = 1; i < n - 1; i++)
+        {
+            Vector3 d1 = _swingSamples[i] - _swingSamples[i - 1];
+            Vector3 d2 = _swingSamples[i + 1] - _swingSamples[i];
+            crossSum += d1.x * d2.y - d1.y * d2.x;
+        }
+
+        Vector3 anchor = _swingSamples[n / 2];
+        anchor.z = 0f;
+
+        float angle = Mathf.Atan2(chord.y, chord.x) * Mathf.Rad2Deg;
+
+        float flip = (crossSum >= 0f) ? 1f : -1f;
+        if (_invertArcFlip)
+            flip = -flip;
+
+        float scaleX = Mathf.Clamp(chordLen * _arcScalePerUnit, _arcMinScale, _arcMaxScale);
+        Vector3 scale = new Vector3(scaleX, scaleX * _arcThicknessRatio * flip, 1f);
+
+        GhostSlashArc arc = AcquireArc();
+        if (arc == null)
+            return;
+
+        arc.gameObject.SetActive(true);
+        arc.transform.SetParent(null, false);
+        arc.transform.position = anchor;
+        arc.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+        arc.transform.localScale = scale;
+
+        Sprite sprite = ResolveArcSprite();
+        arc.Play(sprite, _arcColor, _arcLifetime, _arcAlphaCurve, _arcScaleCurve, OnArcFinished);
+
+        _activeArcs.Add(arc);
+    }
+
+    private Sprite ResolveArcSprite()
+    {
+        if (_ghostSlashSprite != null)
+            return _ghostSlashSprite;
+
+        // Jika memakai prefab, biarkan sprite bawaan prefab dipakai (null = jangan override)
+        if (_ghostSlashPrefab != null)
+            return null;
+
+        return GhostSlashSpriteFactory.GetOrCreate();
+    }
+
+    private GhostSlashArc AcquireArc()
+    {
+        while (_arcPool.Count > 0)
+        {
+            GhostSlashArc pooled = _arcPool.Dequeue();
+            if (pooled != null)
+                return pooled;
+        }
+
+        if (_ghostSlashPrefab != null)
+        {
+            GameObject go = Instantiate(_ghostSlashPrefab);
+            GhostSlashArc arc = go.GetComponent<GhostSlashArc>();
+            if (arc == null)
+                arc = go.AddComponent<GhostSlashArc>();
+            return arc;
+        }
+
+        GameObject procedural = new GameObject("GhostSlashArc_Procedural", typeof(SpriteRenderer), typeof(GhostSlashArc));
+        SpriteRenderer sr = procedural.GetComponent<SpriteRenderer>();
+
+        if (_arcMaterial != null)
+            sr.material = _arcMaterial;
+        else
+            sr.material = new Material(Shader.Find("Sprites/Default"));
+
+        sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        sr.receiveShadows = false;
+
+        return procedural.GetComponent<GhostSlashArc>();
+    }
+
+    private void OnArcFinished(GhostSlashArc arc)
+    {
+        _activeArcs.Remove(arc);
+        arc.ForceStop();
+        arc.transform.SetParent(transform, false);
+        arc.gameObject.SetActive(false);
+        _arcPool.Enqueue(arc);
+    }
+
+    private void ClearActiveArcs()
+    {
+        for (int i = _activeArcs.Count - 1; i >= 0; i--)
+        {
+            GhostSlashArc arc = _activeArcs[i];
+            if (arc == null)
+                continue;
+
+            arc.ForceStop();
+            arc.transform.SetParent(transform, false);
+            arc.gameObject.SetActive(false);
+            _arcPool.Enqueue(arc);
+        }
+
+        _activeArcs.Clear();
+    }
+
+    #endregion
 }

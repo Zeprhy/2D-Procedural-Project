@@ -2605,6 +2605,9 @@ MonoBehaviour:
   _maxSlopeAngle: 45
   _raycastDistance: 2.5
   _footAlignSpeed: 15
+  _stairTreadProbeDistance: 0.14
+  _landingContactTolerance: 0.02
+  _landingDampSpeed: 16
 --- !u!4 &7469781701598909632
 Transform:
   m_ObjectHideFlags: 0
@@ -3387,16 +3390,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c3015b86ed6eed4e8bb7c87e03ffc0d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PelvisController2DRebuild
-  _playerRoot: {fileID: 7469781701559126103}
   _movement: {fileID: 7469781701559126100}
   _legController: {fileID: 7469781701559126106}
   _facingReference: {fileID: 7469781702054462226}
-  _maxPelvisDeviation: 0.25
-  _smoothFollowSpeed: 12
   _walkBobAmount: 0.06
+  _smoothFollowSpeed: 12
   _idleBreathingAmount: 0.025
   _breathingFrequency: 2.5
-  _maxTiltAngle: 6
+  _maxLandingDip: 0.075
+  _landingDipRecoverySpeed: 0.2
+  _forwardWalkLeanAngle: 4.5
+  _maxInertiaTilt: 6
   _tiltSensitivity: 0.8
   _tiltRecoverySpeed: 10
 --- !u!4 &7469781702054462226

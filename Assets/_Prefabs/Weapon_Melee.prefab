@@ -462,11 +462,55 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MeleeTrailVFXController
   _trail: {fileID: 2148707264734353405}
+  _swingTip: {fileID: 5520168608187157376}
   _applySettingsOnAwake: 1
   _clearOnBegin: 1
   _trailTime: 0.18
   _startWidth: 0.12
   _endWidth: 0.02
+  _useWidthCurve: 1
+  _widthCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.05
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.18
+      value: 0.16
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.55
+      value: 0.1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   _colorGradient:
     serializedVersion: 2
     key0: {r: 1, g: 1, b: 1, a: 0.9}
@@ -500,6 +544,87 @@ MonoBehaviour:
   _trailMaterial: {fileID: 2100000, guid: dead3bd2445375d419e3fc35a71c70b8, type: 2}
   _minVertexDistance: 0.01
   _initialEmitting: 0
+  _enableGhostSlash: 1
+  _ghostSlashPrefab: {fileID: 6926305354406631471, guid: 7a5f7ef2302acab4fac3ca4a5b291716, type: 3}
+  _ghostSlashSprite: {fileID: 921647689448838404, guid: 766b11de7a8b74f41ab94bd32aa906b4, type: 3}
+  _arcMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
+  _arcColor: {r: 1, g: 1, b: 1, a: 0.85}
+  _arcLifetime: 0.28
+  _minArcChord: 0.25
+  _arcScalePerUnit: 1.15
+  _arcMinScale: 0.6
+  _arcMaxScale: 2.4
+  _arcThicknessRatio: 1
+  _invertArcFlip: 0
+  _arcAlphaCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.9
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.35
+      value: 0.55
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _arcScaleCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.85
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 0.25
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1.08
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _maxSwingSamples: 96
+  _sampleMinDistance: 0.02
+  _swingSparks: {fileID: 6906092928813642593, guid: d0978aaf95df76d4ba1b4722d3c75383, type: 3}
 --- !u!1 &8529619113551375633
 GameObject:
   m_ObjectHideFlags: 0
