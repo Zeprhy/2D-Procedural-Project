@@ -59,35 +59,35 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
 
     [Header("Smart Stairs & Landing")]
     [SerializeField] private float _stairTreadProbeDistance = 0.14f;
-    [SerializeField] private float _landingContactTolerance = 0.025f;
-    [SerializeField] private float _landingDampSpeed = 16f;
+    [SerializeField] private float _landingContactTolerance = 0.06f; // Diperlonggar agar stabil di lereng
+    [SerializeField] private float _landingDampSpeed = 18f;
 
     [Header("Stability & Anti-Jitter")]
-    [SerializeField] private float _groundGraceDuration = 0.08f;
-    [SerializeField] private float _airborneVelocityThreshold = 2.5f;
+    [SerializeField] private float _groundGraceDuration = 0.10f;
+    [SerializeField] private float _airborneVelocityThreshold = 3.8f; // Dinaikkan agar kecepatan lereng tidak memicu airborne
     [SerializeField] private float _walkEnterSpeed = 0.18f;
     [SerializeField] private float _walkExitSpeed = 0.08f;
     [SerializeField] private float _walkEnterDelay = 0.05f;
     [SerializeField] private float _walkExitDelay = 0.10f;
-    [SerializeField] private float _stepRetryCooldown = 0.05f;
+    [SerializeField] private float _stepRetryCooldown = 0.04f;
 
-    [Header("Step Trigger (P1)")]
-    [Tooltip("Kecepatan minimum agar arah langkah mengikuti momentum (anti kaki tertinggal saat skid/balik arah)")]
-    [SerializeField] private float _momentumStepSpeed = 0.5f;
+    [Header("Step Trigger")]
+    [Tooltip("Kecepatan minimum agar arah langkah mengikuti momentum")]
+    [SerializeField] private float _momentumStepSpeed = 0.4f;
     [Tooltip("Rasio jarak terhadap stride untuk memicu langkah")]
-    [SerializeField] private float _stepTriggerRatio = 0.75f;
+    [SerializeField] private float _stepTriggerRatio = 0.70f;
     [Tooltip("Rasio jarak untuk re-arm langkah berikutnya")]
-    [SerializeField] private float _stepRearmRatio = 0.35f;
+    [SerializeField] private float _stepRearmRatio = 0.40f;
     [Tooltip("Jeda minimum setelah langkah selesai sebelum langkah berikutnya")]
-    [SerializeField] private float _stepCooldown = 0.06f;
-    [Tooltip("Lead time prediksi pijakan berdasarkan kecepatan (detik)")]
-    [SerializeField] private float _stepPredictionLead = 0.05f;
-    [Tooltip("Pengurangan stride di lereng (0 = tidak ada, 1 = 100%)")]
+    [SerializeField] private float _stepCooldown = 0.05f;
+    [Tooltip("Lead time prediksi pijakan berdasarkan kecepatan")]
+    [SerializeField] private float _stepPredictionLead = 0.04f;
+    [Tooltip("Pengurangan stride di lereng")]
     [SerializeField][Range(0f, 1f)] private float _slopeStrideScale = 0.15f;
-    [Tooltip("Rotasi tambahan telapak saat ayunan (derajat, 0 = nonaktif)")]
+    [Tooltip("Rotasi tambahan telapak saat ayunan")]
     [SerializeField] private float _stepSwingRoll = 0f;
 
-    [Header("Footstep Events (P2)")]
+    [Header("Footstep Events")]
     [SerializeField] private bool _enableFootstepEvents = true;
 
     [Header("Debug")]
@@ -303,10 +303,12 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         else if (CurrentState != LocomotionState.Airborne)
             _groundGraceTimer += dt;
 
+        // PERBAIKAN 1: Filter Airborne Cerdas (Jangan trigger airborne jika masih menempel di tanah lereng)
+        bool hasGroundSample = _leftSample.valid || _rightSample.valid;
         bool isTrulyAirborne = !grounded &&
             (CurrentState == LocomotionState.Airborne ||
              _groundGraceTimer >= _groundGraceDuration ||
-             Mathf.Abs(vel.y) > _airborneVelocityThreshold);
+             (vel.y < -_airborneVelocityThreshold && !hasGroundSample));
 
         if (isTrulyAirborne)
         {
@@ -337,12 +339,15 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
             float dyL = validL ? Mathf.Abs(_leftPlantedPos.y - _leftSample.point.y) : float.PositiveInfinity;
             float dyR = validR ? Mathf.Abs(_rightPlantedPos.y - _rightSample.point.y) : float.PositiveInfinity;
 
-            bool feetGrounded = validL && validR &&
-                                dyL <= _landingContactTolerance &&
-                                dyR <= _landingContactTolerance;
+            bool feetGrounded = (validL && dyL <= _landingContactTolerance) || 
+                                (validR && dyR <= _landingContactTolerance);
 
+            // PERBAIKAN 2: Begitu landing selesai/timeout, snap kaki ke tanah valid agar tidak menggantung di udara
             if (feetGrounded || _landingTimeoutTimer <= 0f)
             {
+                if (validL) _leftPlantedPos = _leftSample.point;
+                if (validR) _rightPlantedPos = _rightSample.point;
+
                 CurrentState = GetIsMoving() ? LocomotionState.Walking : LocomotionState.Idle;
                 _isIdleSettled = false;
             }
@@ -419,7 +424,6 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
 
         if (_isIdleSettled)
         {
-            // Lepas lock jika badan bergeser (mis. meluncur di lereng).
             if ((transform.position - _settledBodyPos).sqrMagnitude > 0.0001f)
                 _isIdleSettled = false;
             else
@@ -468,30 +472,41 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         float vx = vel.x;
         float facingDir = _facingReference != null ? Mathf.Sign(_facingReference.lossyScale.x) : 1f;
 
-        // Prioritas arah: momentum -> input -> sisa momentum -> facing.
-        float inputDir = _movement != null ? _movement.MoveInputDirection : 0f;
         float moveDir;
         if (Mathf.Abs(vx) > _momentumStepSpeed)
             moveDir = Mathf.Sign(vx);
-        else if (Mathf.Abs(inputDir) > 0.01f)
-            moveDir = inputDir;
-        else if (Mathf.Abs(vx) > 0.02f)
-            moveDir = Mathf.Sign(vx);
+        else if (_movement != null && Mathf.Abs(_movement.PlayerRigidbody.linearVelocity.x) > 0.02f)
+            moveDir = Mathf.Sign(_movement.PlayerRigidbody.linearVelocity.x);
         else
             moveDir = facingDir;
 
         float slopeFactor = Mathf.Lerp(1f, 1f - _slopeStrideScale, GetAverageSlope() / Mathf.Max(1f, _maxSlopeAngle));
         float dynamicStride = (_baseStepDistance + (Mathf.Abs(vx) * _speedStrideMultiplier)) * slopeFactor;
-        if (moveDir != facingDir) dynamicStride *= 0.75f;
+        
+        // Sedikit perpendek langkah jika berjalan mundur
+        if (moveDir != facingDir) dynamicStride *= 0.80f;
 
         Vector3 idealLeft = CalculateIdealStancePos(true);
         Vector3 idealRight = CalculateIdealStancePos(false);
 
-        // Jarak trigger horizontal: selisih Y lereng tidak memicu langkah palsu.
         float leftDist = Mathf.Abs(_leftPlantedPos.x - idealLeft.x);
         float rightDist = Mathf.Abs(_rightPlantedPos.x - idealRight.x);
 
+        // PERBAIKAN 3: Update Rearm dengan pengaman darurat anti-terkunci
         UpdateStepRearm(leftDist, rightDist, dynamicStride);
+
+        // PERBAIKAN 4: Emergency Step jika kaki tertinggal terlalu jauh (mencegah kaki terseret/terangkat saat mundur)
+        float maxAllowedDrag = _maxLegReach * 0.85f;
+        if (Vector3.Distance(_leftPlantedPos, _leftHip.position) > maxAllowedDrag)
+        {
+            _leftStepArmed = true;
+            if (TryTriggerStep(true, leftDist, moveDir, dynamicStride)) return;
+        }
+        if (Vector3.Distance(_rightPlantedPos, _rightHip.position) > maxAllowedDrag)
+        {
+            _rightStepArmed = true;
+            if (TryTriggerStep(false, rightDist, moveDir, dynamicStride)) return;
+        }
 
         if (_stepCooldownTimer > 0f) return;
 
@@ -510,8 +525,10 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
     private void UpdateStepRearm(float leftDist, float rightDist, float stride)
     {
         float rearm = stride * _stepRearmRatio;
-        if (leftDist <= rearm) _leftStepArmed = true;
-        if (rightDist <= rearm) _rightStepArmed = true;
+
+        // Rearm normal saat kaki mendekat, ATAU rearm darurat saat kaki tertinggal jauh (mencegah deadlock mundur)
+        if (leftDist <= rearm || leftDist > stride * 0.95f) _leftStepArmed = true;
+        if (rightDist <= rearm || rightDist > stride * 0.95f) _rightStepArmed = true;
     }
 
     private bool TryTriggerStep(bool isLeft, float dist, float moveDir, float stride)
@@ -535,15 +552,14 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         Vector3 bodyPos = transform.position;
         float vx = GetVelocity().x;
 
-        // Offset lateral mengikuti home kaki agar tetap benar saat karakter di-flip.
         Transform home = isLeft ? _leftHome : _rightHome;
         float sideOffset = home != null
             ? home.position.x - bodyPos.x
             : (isLeft ? -1f : 1f) * (_stanceWidth * 0.5f);
 
-        // Lead hanya dipakai saat velocity searah langkah.
-        float leadSpeed = Mathf.Max(0f, vx * moveDir);
-        float predictedX = bodyPos.x + sideOffset + (moveDir * (stride + (leadSpeed * _stepPredictionLead)));
+        // Batasi lead prediksi agar tidak melempar kaki terlalu jauh keluar jangkauan paha saat mundur
+        float leadSpeed = Mathf.Clamp(Mathf.Abs(vx) * _stepPredictionLead, 0f, 0.12f);
+        float predictedX = bodyPos.x + sideOffset + (moveDir * (stride + leadSpeed));
 
         Vector3 rayOrigin = new Vector3(predictedX, bodyPos.y + 1.2f, bodyPos.z);
         RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, _raycastDistance + 1.2f, _groundLayer);
@@ -736,7 +752,6 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
             return true;
         }
 
-        // Safe fallback: pertahankan pijakan terakhir.
         if (_isInitialized)
         {
             groundPos = isLeft ? _leftPlantedPos : _rightPlantedPos;
@@ -786,7 +801,6 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
                 return reValidatedPos;
         }
 
-        // Jangan pernah kembalikan posisi di udara.
         return targetPos;
     }
 
