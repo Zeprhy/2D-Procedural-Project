@@ -495,19 +495,6 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
 
         if (_stepCooldownTimer > 0f) return;
 
-        // Kaki yang sudah melewati jangkauan wajib melangkah lebih dulu (anti-melayang).
-        if (IsLegOverstretched(true))
-        {
-            TryTriggerStep(true, leftDist, moveDir, dynamicStride, true);
-            return;
-        }
-
-        if (IsLegOverstretched(false))
-        {
-            TryTriggerStep(false, rightDist, moveDir, dynamicStride, true);
-            return;
-        }
-
         if (!_lastSteppedLeft)
         {
             if (TryTriggerStep(true, leftDist, moveDir, dynamicStride)) return;
@@ -520,15 +507,6 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         }
     }
 
-    private bool IsLegOverstretched(bool isLeft)
-    {
-        Transform hip = isLeft ? _leftHip : _rightHip;
-        if (hip == null) return false;
-
-        Vector3 planted = isLeft ? _leftPlantedPos : _rightPlantedPos;
-        return (planted - hip.position).sqrMagnitude > (_maxLegReach * _maxLegReach);
-    }
-
     private void UpdateStepRearm(float leftDist, float rightDist, float stride)
     {
         float rearm = stride * _stepRearmRatio;
@@ -536,15 +514,12 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         if (rightDist <= rearm) _rightStepArmed = true;
     }
 
-    private bool TryTriggerStep(bool isLeft, float dist, float moveDir, float stride, bool force = false)
+    private bool TryTriggerStep(bool isLeft, float dist, float moveDir, float stride)
     {
-        if (!force)
-        {
-            if (dist <= stride * _stepTriggerRatio) return false;
+        if (dist <= stride * _stepTriggerRatio) return false;
 
-            bool armed = isLeft ? _leftStepArmed : _rightStepArmed;
-            if (!armed) return false;
-        }
+        bool armed = isLeft ? _leftStepArmed : _rightStepArmed;
+        if (!armed) return false;
 
         if (!TriggerStep(isLeft, moveDir, stride)) return false;
 
