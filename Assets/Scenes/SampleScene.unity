@@ -420,19 +420,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::OffHandController2D
   _aimTracker: {fileID: 985288896}
-  _leftShoulderPivot: {fileID: 7469781703220577739}
-  _gfxTransform: {fileID: 7469781702054462226}
-  _lHandTarget: {fileID: 7469781703044582525}
-  _lHandBone: {fileID: 7469781701714194708}
-  _handAngleOffset: 5
+  _proceduralArm: {fileID: 1920129701}
   _equippedWeapon: {fileID: 0}
-  _idleOffset: {x: 0.2, y: -1}
-  _minReach: 0.6
-  _maxReach: 1
-  _minAimAngle: -45
-  _maxAimAngle: 90
-  _springStiffness: 140
-  _springDamping: 14
 --- !u!1 &235276749
 GameObject:
   m_ObjectHideFlags: 0
@@ -883,6 +872,78 @@ MonoBehaviour:
   _defaultZoom: 5
   _zoomRestoreSpeed: 6
   _minOrthographicSize: 3.2
+--- !u!1 &547208453
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 547208454}
+  - component: {fileID: 547208455}
+  m_Layer: 11
+  m_Name: ProceduralArm2D_Right
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &547208454
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 547208453}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1467204643}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &547208455
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 547208453}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8bdaddea4ba58144489d3fa92ce9f5c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProceduralArm2DRebuild
+  _shoulderPivot: {fileID: 7469781702600649959}
+  _handTarget: {fileID: 7469781702848666608}
+  _handBone: {fileID: 7469781702973571908}
+  _gfxTransform: {fileID: 7469781702054462226}
+  _elbowHint: {fileID: 7469781702624171460}
+  _minReach: 0.5
+  _maxReach: 1
+  _springStiffness: 130
+  _springDamping: 14
+  _mouseNearDist: 0.8
+  _mouseFarDist: 2.2
+  _minAimAngle: -55
+  _maxAimAngle: 70
+  _aimLagTime: 0.12
+  _handAngleOffset: -10
+  _idleOffset: {x: 0.3, y: -0.85}
+  _idleAngle: -65
+  _useTwoBoneIK: 0
+  _upperArmLength: 0.3
+  _forearmLength: 0.35
+  _useShoulderOffset: 0
+  _maxShoulderUpOffset: 0.15
+  _maxShoulderDownOffset: 0.1
+  _shoulderUpThreshold: 30
+  _shoulderDownThreshold: -45
+  _shoulderOffsetSpeed: 8
+  _recoilRecoverySpeed: 120
+  _maxRecoilAngle: 15
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -1150,23 +1211,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DynamicArmWeaponController2D
   _aimTracker: {fileID: 985288896}
-  _rightShoulderPivot: {fileID: 7469781702600649959}
-  _gfxTransform: {fileID: 7469781702054462226}
-  _rHandTarget: {fileID: 7469781702848666608}
-  _rHandBone: {fileID: 7469781702684168655}
-  _handAngleOffset: 5
+  _proceduralArm: {fileID: 547208455}
   _equippedWeapon: {fileID: 0}
-  _swordRestOffset: {x: 0.12, y: -1}
-  _swordRestAngle: -65
-  _minReach: 0.45
-  _maxReach: 1
-  _minAimAngle: -70
-  _maxAimAngle: 60
-  _mouseNearDist: 1.2
-  _mouseFarDist: 2
-  _springStiffness: 120
-  _springDamping: 12
-  _aimLagTime: 0.12
 --- !u!1001 &847551009
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1771,6 +1817,8 @@ Transform:
   - {fileID: 204216279}
   - {fileID: 1466995624}
   - {fileID: 1638167536}
+  - {fileID: 547208454}
+  - {fileID: 1920129700}
   m_Father: {fileID: 7469781701559126103}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1504121535
@@ -2321,6 +2369,78 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1920129699
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1920129700}
+  - component: {fileID: 1920129701}
+  m_Layer: 11
+  m_Name: ProceduralArm2D_Left
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1920129700
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1920129699}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1467204643}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1920129701
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1920129699}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8bdaddea4ba58144489d3fa92ce9f5c6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProceduralArm2DRebuild
+  _shoulderPivot: {fileID: 7469781703220577739}
+  _handTarget: {fileID: 7469781703044582525}
+  _handBone: {fileID: 7469781702566504543}
+  _gfxTransform: {fileID: 7469781702054462226}
+  _elbowHint: {fileID: 7469781703112098124}
+  _minReach: 0.5
+  _maxReach: 1
+  _springStiffness: 130
+  _springDamping: 14
+  _mouseNearDist: 0.8
+  _mouseFarDist: 2.2
+  _minAimAngle: -55
+  _maxAimAngle: 70
+  _aimLagTime: 0.12
+  _handAngleOffset: -10
+  _idleOffset: {x: 0.3, y: -0.85}
+  _idleAngle: -65
+  _useTwoBoneIK: 0
+  _upperArmLength: 0.3
+  _forearmLength: 0.35
+  _useShoulderOffset: 1
+  _maxShoulderUpOffset: 0.15
+  _maxShoulderDownOffset: 0.1
+  _shoulderUpThreshold: 30
+  _shoulderDownThreshold: -45
+  _shoulderOffsetSpeed: 8
+  _recoilRecoverySpeed: 120
+  _maxRecoilAngle: 15
 --- !u!50 &6569918035079252724
 Rigidbody2D:
   serializedVersion: 5
