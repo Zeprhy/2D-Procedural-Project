@@ -1819,6 +1819,7 @@ Transform:
   - {fileID: 1638167536}
   - {fileID: 547208454}
   - {fileID: 1920129700}
+  - {fileID: 1812179416}
   m_Father: {fileID: 7469781701559126103}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1504121535
@@ -2231,6 +2232,63 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 24c48477356ba0c40ae8063c6a36a560, type: 3}
+--- !u!1 &1812179415
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1812179416}
+  - component: {fileID: 1812179417}
+  m_Layer: 11
+  m_Name: ProceduralAimUpperBody2D
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1812179416
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1812179415}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1467204643}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1812179417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1812179415}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c1a1b1459653de41b1aef21501e8461, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProceduralUpperBodyAim2D
+  _headBone: {fileID: 7469781701788766169}
+  _spineBones:
+  - {fileID: 7469781703059393417}
+  - {fileID: 7469781702326700820}
+  _headWeight: 0.5
+  _spineWeights:
+  - 0.2
+  - 0.3
+  _gfxTransform: {fileID: 7469781702054462226}
+  _aimTracker: {fileID: 985288896}
+  _maxLookAngle: 45
+  _aimLagTime: 0.3
+  _enableUpperBodyAim: 1
 --- !u!1 &1876390122
 GameObject:
   m_ObjectHideFlags: 0
