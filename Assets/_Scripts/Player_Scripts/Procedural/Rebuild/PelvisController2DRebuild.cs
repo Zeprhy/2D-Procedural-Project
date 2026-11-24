@@ -25,6 +25,22 @@ public class PelvisController2DRebuild : MonoBehaviour
     [Tooltip("Kecepatan pemulihan dari landing dip (detik)")]
     [SerializeField] private float _landingDipRecoverySpeed = 0.20f;
 
+    [Header("Landing Detection Stability (P0)")]
+    [Tooltip("Durasi grounded harus stabil sebelum dianggap benar-benar mendarat")]
+    [SerializeField] private float _groundStableTime = 0.06f;
+    [Tooltip("Durasi minimum di udara sebelum bisa dianggap mendarat")]
+    [SerializeField] private float _minAirTimeForLanding = 0.10f;
+    [Tooltip("Jeda antar landing dip untuk mencegah retrigger akibat flicker grounded")]
+    [SerializeField] private float _landingCooldown = 0.25f;
+    [Tooltip("Kecepatan jatuh minimum saat menyentuh tanah agar dianggap landing nyata")]
+    [SerializeField] private float _landingMinFallSpeed = 2.0f;
+
+    [Header("Inertia Filter (P0)")]
+    [Tooltip("Waktu smoothing akselerasi (detik) untuk meredam noise velocity")]
+    [SerializeField] private float _accelSmoothing = 0.08f;
+    [Tooltip("Deadzone akselerasi sebelum inertia tilt berlaku")]
+    [SerializeField] private float _accelDeadzone = 3f;
+
     [Header("Forward Walking Lean (Kemiringan Tubuh)")]
     [Tooltip("Sudut kecondongan tubuh ke depan saat berjalan (derajat)")]
     [SerializeField] private float _forwardWalkLeanAngle = 4.5f;
@@ -43,7 +59,13 @@ public class PelvisController2DRebuild : MonoBehaviour
     private float _currentLandingDip = 0f;
     private float _currentTotalTilt = 0f;
     private float _lastVelocityX = 0f;
-    private bool _wasGroundedLastFrame = true;
+    private float _accelEma = 0f;
+
+    // Landing detection stability (P0)
+    private float _groundedStableTimer = 0f;
+    private float _airTime = 0f;
+    private float _landingCooldownTimer = 0f;
+    private float _lastAirborneVelocityY = 0f;
 
     private void Awake()
     {
@@ -88,15 +110,42 @@ public class PelvisController2DRebuild : MonoBehaviour
 
     private void UpdateLandingImpactDetection()
     {
-        bool isGroundedNow = GetIsGrounded();
+        float dt = Time.deltaTime;
+        if (_landingCooldownTimer > 0f)
+            _landingCooldownTimer -= dt;
 
-        // Deteksi transisi eksklusif dari AIRBORNE -> GROUNDED
-        if (!_wasGroundedLastFrame && isGroundedNow)
+        bool isGroundedNow = GetIsGrounded();
+        Vector2 vel = GetVelocity();
+
+        if (isGroundedNow)
         {
-            _currentLandingDip = _maxLandingDip;
+            _groundedStableTimer += dt;
+        }
+        else
+        {
+            _groundedStableTimer = 0f;
+            _airTime += dt;
+            _lastAirborneVelocityY = vel.y;
+            return;
         }
 
-        _wasGroundedLastFrame = isGroundedNow;
+        // P0: landing hanya jika airtime cukup, grounded stabil, jatuh cukup cepat, dan tanpa cooldown.
+        bool landed = _airTime >= _minAirTimeForLanding
+                      && _groundedStableTimer >= _groundStableTime
+                      && _lastAirborneVelocityY <= -_landingMinFallSpeed
+                      && _landingCooldownTimer <= 0f;
+
+        if (landed)
+        {
+            _currentLandingDip = _maxLandingDip;
+            _landingCooldownTimer = _landingCooldown;
+            _airTime = 0f;
+        }
+        else if (_groundedStableTimer >= _groundStableTime)
+        {
+            // Tidak memenuhi syarat landing (mis. flicker grounded di tangga) -> buang airtime.
+            _airTime = 0f;
+        }
     }
 
     private void UpdatePelvisPosition()
@@ -155,14 +204,18 @@ public class PelvisController2DRebuild : MonoBehaviour
             forwardLeanAngle = speedRatio * _forwardWalkLeanAngle * forwardMultiplier;
         }
 
-        // 2. ACCELERATION / BRAKING INERTIA TILT
-        float accelX = (currentVx - _lastVelocityX) / Mathf.Max(0.0001f, Time.deltaTime);
+        // 2. ACCELERATION / BRAKING INERTIA TILT (P0: EMA-filtered, deadzone)
+        float dt = Time.deltaTime;
+        float rawAccel = (currentVx - _lastVelocityX) / Mathf.Max(0.0001f, dt);
         _lastVelocityX = currentVx;
 
+        float alpha = 1f - Mathf.Exp(-dt / Mathf.Max(0.0001f, _accelSmoothing));
+        _accelEma = Mathf.Lerp(_accelEma, rawAccel, alpha);
+
         float inertiaTilt = 0f;
-        if (Mathf.Abs(accelX) > 2.0f)
+        if (Mathf.Abs(_accelEma) > _accelDeadzone)
         {
-            float localAccel = accelX * facingDir;
+            float localAccel = _accelEma * facingDir;
             inertiaTilt = Mathf.Clamp((localAccel / 12f) * _tiltSensitivity * _maxInertiaTilt, -_maxInertiaTilt, _maxInertiaTilt);
         }
 

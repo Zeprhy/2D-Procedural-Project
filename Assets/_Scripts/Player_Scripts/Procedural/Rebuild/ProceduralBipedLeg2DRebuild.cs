@@ -1,5 +1,4 @@
 using UnityEngine;
-using System;
 
 [DisallowMultipleComponent]
 public class ProceduralBipedLeg2DRebuild : MonoBehaviour
@@ -68,6 +67,22 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
     [Tooltip("Kecepatan peredaman pendaratan menuju tanah")]
     [SerializeField] private float _landingDampSpeed = 16f;
 
+    [Header("Stability & Anti-Jitter (P0)")]
+    [Tooltip("Grace time sebelum dianggap airborne saat IsGrounded flicker")]
+    [SerializeField] private float _groundGraceDuration = 0.08f;
+    [Tooltip("Kecepatan vertikal minimum untuk langsung dianggap airborne nyata")]
+    [SerializeField] private float _airborneVelocityThreshold = 2.5f;
+    [Tooltip("Ambang kecepatan untuk mulai berjalan")]
+    [SerializeField] private float _walkEnterSpeed = 0.18f;
+    [Tooltip("Ambang kecepatan untuk berhenti berjalan")]
+    [SerializeField] private float _walkExitSpeed = 0.08f;
+    [Tooltip("Durasi kecepatan harus bertahan sebelum masuk Walking")]
+    [SerializeField] private float _walkEnterDelay = 0.05f;
+    [Tooltip("Durasi lambat harus bertahan sebelum masuk Idle")]
+    [SerializeField] private float _walkExitDelay = 0.10f;
+    [Tooltip("Cooldown retry bila pijakan langkah tidak valid")]
+    [SerializeField] private float _stepRetryCooldown = 0.05f;
+
     // State Tracking
     public LocomotionState CurrentState { get; private set; } = LocomotionState.Idle;
     public float WalkCycleNormalized { get; private set; }
@@ -89,13 +104,30 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
     private float _stepProgress = 0f;
     private bool _lastSteppedLeft = false;
     private float _landingTimeoutTimer = 0f;
+    private float _stepRetryTimer = 0f;
 
     // Flag Penstabil Pijakan Idle (Anti-Jitter Lock)
     private bool _isIdleSettled = false;
+    private Vector3 _settledBodyPos;
 
-    private bool _leftIsGrounded;
-    private bool _rightIsGrounded;
+    // Stability timers (P0)
+    private float _groundGraceTimer = 0f;
+    private float _walkEnterTimer = 0f;
+    private float _walkExitTimer = 0f;
+
     private bool _isInitialized = false;
+
+    // Cached ground sample per foot per frame (P0)
+    private struct FootGroundSample
+    {
+        public bool valid;
+        public Vector3 point;
+        public Quaternion rotation;
+        public float slopeAngle;
+    }
+
+    private FootGroundSample _leftSample;
+    private FootGroundSample _rightSample;
 
     public Vector3 LeftFootPosition => _leftTarget != null ? _leftTarget.position : _leftPlantedPos;
     public Vector3 RightFootPosition => _rightTarget != null ? _rightTarget.position : _rightPlantedPos;
@@ -117,6 +149,14 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
     private void Update()
     {
         if (!_isInitialized) return;
+
+        if (_stepRetryTimer > 0f)
+            _stepRetryTimer -= Time.deltaTime;
+
+        // P0 perf: saat idle sudah settle & badan tidak bergeser, sample tidak perlu di-refresh.
+        bool bodyMoved = (transform.position - _settledBodyPos).sqrMagnitude > 0.0001f;
+        if (!_isIdleSettled || bodyMoved || CurrentState != LocomotionState.Idle)
+            RefreshGroundSamples();
 
         UpdateLocomotionState();
         ProcessCurrentState();
@@ -148,7 +188,7 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
     {
         if (_movement == null) return false;
         float vx = Mathf.Abs(GetVelocity().x);
-        return vx > 0.12f || _movement.IsMoving;
+        return vx > _walkExitSpeed || _movement.IsMoving;
     }
 
     #endregion
@@ -161,6 +201,8 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
             return;
         }
 
+        RefreshGroundSamples();
+
         SnapFootToGround(true, out _leftPlantedPos, out _leftPlantedRot);
         SnapFootToGround(false, out _rightPlantedPos, out _rightPlantedRot);
 
@@ -170,25 +212,61 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         _rightSwingTarget = _rightPlantedPos;
 
         _isIdleSettled = true;
+        _settledBodyPos = transform.position;
         ApplyTargetTransforms();
         _isInitialized = true;
     }
+
+    #region Ground Sampling (P0 cache)
+
+    private void RefreshGroundSamples()
+    {
+        _leftSample = SampleFootGround(true);
+        _rightSample = SampleFootGround(false);
+    }
+
+    private FootGroundSample SampleFootGround(bool isLeft)
+    {
+        FootGroundSample sample = default;
+        Transform home = isLeft ? _leftHome : _rightHome;
+        if (home == null) return sample;
+
+        Vector3 origin = home.position + Vector3.up * 0.5f;
+        RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, _raycastDistance, _groundLayer);
+        if (hit.collider == null) return sample;
+
+        float slope = Vector2.Angle(hit.normal, Vector2.up);
+        if (slope > _maxSlopeAngle) return sample;
+
+        // Offset along the surface normal so the foot sits correctly on slopes.
+        Vector3 point = (Vector3)hit.point + (Vector3)(hit.normal * _footYOffset);
+        point.z = home.position.z;
+
+        sample.valid = true;
+        sample.point = point;
+        sample.rotation = CalculateFootRotation(hit.normal);
+        sample.slopeAngle = slope;
+        return sample;
+    }
+
+    #endregion
 
     private void UpdateLocomotionState()
     {
         bool grounded = GetIsGrounded();
         Vector2 vel = GetVelocity();
+        float dt = Time.deltaTime;
 
-        // 1. FILTER AIRBORNE CERDAS (Mencegah flicker 1 frame di lereng saat idle)
-        bool isTrulyAirborne = !grounded;
-        if (CurrentState == LocomotionState.Idle && !grounded)
-        {
-            // Jika sedang idle di lereng dan ada flicker tanah, hanya anggap airborne jika ada kecepatan vertikal jatuh/lompat
-            if (Mathf.Abs(vel.y) < 1.0f)
-            {
-                isTrulyAirborne = false;
-            }
-        }
+        // 1. GROUND GRACE (P0): toleransi flicker IsGrounded (mis. di tepi anak tangga).
+        if (grounded)
+            _groundGraceTimer = 0f;
+        else if (CurrentState != LocomotionState.Airborne)
+            _groundGraceTimer += dt;
+
+        bool isTrulyAirborne = !grounded &&
+            (CurrentState == LocomotionState.Airborne ||
+             _groundGraceTimer >= _groundGraceDuration ||
+             Mathf.Abs(vel.y) > _airborneVelocityThreshold);
 
         if (isTrulyAirborne)
         {
@@ -211,18 +289,19 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
             return;
         }
 
-        // 3. EVALUASI STATE LANDING
+        // 3. EVALUASI STATE LANDING (P0: bandingkan jarak VERTIKAL + validitas tanah)
         if (CurrentState == LocomotionState.Landing)
         {
-            _landingTimeoutTimer -= Time.deltaTime;
+            _landingTimeoutTimer -= dt;
 
-            SnapFootToGround(true, out Vector3 targetLeft, out _);
-            SnapFootToGround(false, out Vector3 targetRight, out _);
+            bool validL = _leftSample.valid;
+            bool validR = _rightSample.valid;
+            float dyL = validL ? Mathf.Abs(_leftPlantedPos.y - _leftSample.point.y) : float.PositiveInfinity;
+            float dyR = validR ? Mathf.Abs(_rightPlantedPos.y - _rightSample.point.y) : float.PositiveInfinity;
 
-            float distLeft = Vector3.Distance(_leftPlantedPos, targetLeft);
-            float distRight = Vector3.Distance(_rightPlantedPos, targetRight);
-
-            bool feetGrounded = distLeft <= _landingContactTolerance && distRight <= _landingContactTolerance;
+            bool feetGrounded = validL && validR &&
+                                dyL <= _landingContactTolerance &&
+                                dyR <= _landingContactTolerance;
             bool timedOut = _landingTimeoutTimer <= 0f;
 
             if (feetGrounded || timedOut)
@@ -233,17 +312,45 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
             return;
         }
 
-        // 4. EVALUASI WALKING VS IDLE
-        bool isMoving = GetIsMoving();
-        LocomotionState targetState = isMoving ? LocomotionState.Walking : LocomotionState.Idle;
+        // 4. EVALUASI WALKING VS IDLE (P0: hysteresis + debounce)
+        float absVx = Mathf.Abs(vel.x);
+        bool inputMoving = _movement != null && _movement.IsMoving;
+        bool wantsWalk = inputMoving || absVx > _walkEnterSpeed;
+        bool wantsIdle = !inputMoving && absVx < _walkExitSpeed;
+
+        LocomotionState targetState = CurrentState;
+
+        if (CurrentState == LocomotionState.Walking)
+        {
+            if (wantsIdle) _walkExitTimer += dt;
+            else _walkExitTimer = 0f;
+
+            if (_walkExitTimer >= _walkExitDelay)
+            {
+                targetState = LocomotionState.Idle;
+                _walkExitTimer = 0f;
+            }
+        }
+        else // Idle
+        {
+            if (wantsWalk) _walkEnterTimer += dt;
+            else _walkEnterTimer = 0f;
+
+            if (_walkEnterTimer >= _walkEnterDelay)
+            {
+                targetState = LocomotionState.Walking;
+                _walkEnterTimer = 0f;
+            }
+        }
 
         if (CurrentState != targetState)
         {
             CurrentState = targetState;
             if (CurrentState == LocomotionState.Idle)
-            {
-                _isIdleSettled = false; // Reset agar kaki menyelesaikan settle sekali saat berhenti
-            }
+                _isIdleSettled = false; // kaki menyelesaikan settle sekali saat berhenti
+
+            _walkEnterTimer = 0f;
+            _walkExitTimer = 0f;
         }
     }
 
@@ -271,6 +378,7 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
 
     /// <summary>
     /// PHASE 5.1: Kaki menyesuaikan diri ke tanah sekali saat berhenti, lalu DIBEKUKAN TOTAL agar tidak bergetar di lereng.
+    /// P0: lock dilepas otomatis jika badan bergeser (mis. meluncur di lereng).
     /// </summary>
     private void ProcessIdleState()
     {
@@ -284,8 +392,16 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         // Jika kedua kaki sudah terkunci diam di lereng, JANGAN LERP ATAU RAYCAST LAGI!
         if (_isIdleSettled)
         {
-            WalkCycleNormalized = 0f;
-            return;
+            // P0: badan bergeser -> lepas lock dan re-settle halus (bukan snap).
+            if ((transform.position - _settledBodyPos).sqrMagnitude > 0.0001f)
+            {
+                _isIdleSettled = false;
+            }
+            else
+            {
+                WalkCycleNormalized = 0f;
+                return;
+            }
         }
 
         // Transisi halus saat baru berhenti menuju kontak tanah stabil
@@ -309,6 +425,7 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
             _leftPlantedRot = rotLeft;
             _rightPlantedRot = rotRight;
             _isIdleSettled = true; // KUNCI! Hentikan seluruh update per frame selama diam.
+            _settledBodyPos = transform.position;
         }
 
         WalkCycleNormalized = 0f;
@@ -356,8 +473,8 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
 
     private void TriggerStep(bool isLeft, float moveDir, float stride)
     {
-        _activeSwingLeg = isLeft ? ActiveLeg.Left : ActiveLeg.Right;
-        _stepProgress = 0f;
+        // P0: hindari spam retry saat pijakan tidak valid.
+        if (_stepRetryTimer > 0f) return;
 
         Vector3 bodyPos = transform.position;
         float sideOffset = (isLeft ? -1f : 1f) * (_stanceWidth * 0.5f);
@@ -366,9 +483,9 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
         Vector3 rayOrigin = new Vector3(predictedX, bodyPos.y + 1.2f, bodyPos.z);
         RaycastHit2D hit = Physics2D.Raycast(rayOrigin, Vector2.down, _raycastDistance + 1.2f, _groundLayer);
 
-        Vector3 landingPos;
-        Quaternion landingRot = Quaternion.identity;
         bool validTreadFound = false;
+        Vector3 landingPos = Vector3.zero;
+        Quaternion landingRot = Quaternion.identity;
 
         if (hit.collider != null)
         {
@@ -376,37 +493,32 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
 
             if (slopeAngle <= _maxSlopeAngle)
             {
-                landingPos = new Vector3(hit.point.x, hit.point.y + _footYOffset, bodyPos.z);
+                landingPos = (Vector3)hit.point + (Vector3)(hit.normal * _footYOffset);
+                landingPos.z = bodyPos.z;
                 landingRot = CalculateFootRotation(hit.normal);
                 validTreadFound = true;
             }
-            else if (slopeAngle > 50f)
+            else
             {
+                // P0: semua permukaan > _maxSlopeAngle dianggap riser -> probe maju cari tread datar.
                 Vector3 forwardProbeOrigin = new Vector3(predictedX + (moveDir * _stairTreadProbeDistance), bodyPos.y + 1.5f, bodyPos.z);
                 RaycastHit2D hitTread = Physics2D.Raycast(forwardProbeOrigin, Vector2.down, _raycastDistance + 1.5f, _groundLayer);
 
                 if (hitTread.collider != null && Vector2.Angle(hitTread.normal, Vector2.up) <= _maxSlopeAngle)
                 {
-                    landingPos = new Vector3(hitTread.point.x, hitTread.point.y + _footYOffset, bodyPos.z);
+                    landingPos = (Vector3)hitTread.point + (Vector3)(hitTread.normal * _footYOffset);
+                    landingPos.z = bodyPos.z;
                     landingRot = CalculateFootRotation(hitTread.normal);
                     validTreadFound = true;
                 }
-                else
-                {
-                    float fallbackY = isLeft ? _rightPlantedPos.y : _leftPlantedPos.y;
-                    landingPos = new Vector3(predictedX, fallbackY, bodyPos.z);
-                }
-            }
-            else
-            {
-                float fallbackY = isLeft ? _rightPlantedPos.y : _leftPlantedPos.y;
-                landingPos = new Vector3(predictedX, fallbackY, bodyPos.z);
             }
         }
-        else
+
+        // P0: SAFE FALLBACK — jangan pernah mengayun kaki ke udara / ke Y kaki lain.
+        if (!validTreadFound)
         {
-            float fallbackY = isLeft ? _rightPlantedPos.y : _leftPlantedPos.y;
-            landingPos = new Vector3(predictedX, fallbackY, bodyPos.z);
+            _stepRetryTimer = _stepRetryCooldown;
+            return;
         }
 
         Transform hip = isLeft ? _leftHip : _rightHip;
@@ -424,6 +536,9 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
             _rightSwingTarget = landingPos;
             _rightTargetRot = landingRot;
         }
+
+        _activeSwingLeg = isLeft ? ActiveLeg.Left : ActiveLeg.Right;
+        _stepProgress = 0f;
     }
 
     private void ProgressSwingStep()
@@ -526,37 +641,38 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
 
     private Vector3 CalculateIdealStancePos(bool isLeft)
     {
-        Vector3 origin = isLeft ? _leftHome.position : _rightHome.position;
-        RaycastHit2D hit = Physics2D.Raycast(origin + Vector3.up * 0.5f, Vector2.down, _raycastDistance, _groundLayer);
+        // P0: pakai cached sample (tidak raycast ulang per frame).
+        FootGroundSample sample = isLeft ? _leftSample : _rightSample;
+        if (sample.valid) return sample.point;
 
-        if (hit.collider != null)
-        {
-            return new Vector3(hit.point.x, hit.point.y + _footYOffset, origin.z);
-        }
-
-        return origin;
+        Transform home = isLeft ? _leftHome : _rightHome;
+        return home != null ? home.position : transform.position;
     }
 
     private bool SnapFootToGround(bool isLeft, out Vector3 groundPos, out Quaternion groundRot)
     {
-        Transform home = isLeft ? _leftHome : _rightHome;
+        FootGroundSample sample = isLeft ? _leftSample : _rightSample;
         Transform hip = isLeft ? _leftHip : _rightHip;
+        Transform home = isLeft ? _leftHome : _rightHome;
 
-        Vector3 origin = home != null ? home.position : transform.position;
-        RaycastHit2D hit = Physics2D.Raycast(origin + Vector3.up * 0.5f, Vector2.down, _raycastDistance, _groundLayer);
-
-        if (hit.collider != null && Vector2.Angle(hit.normal, Vector2.up) <= _maxSlopeAngle)
+        if (sample.valid)
         {
-            Vector3 point = new Vector3(hit.point.x, hit.point.y + _footYOffset, origin.z);
-            point = ClampHyperextensionSmart(point, hip, true);
-
-            groundPos = point;
-            groundRot = CalculateFootRotation(hit.normal);
+            groundPos = ClampHyperextensionSmart(sample.point, hip, true);
+            groundRot = sample.rotation;
             return true;
         }
 
-        groundPos = origin;
-        groundRot = Quaternion.identity;
+        // P0: SAFE FALLBACK — pertahankan pijakan terakhir (jangan lompat ke home / udara).
+        if (_isInitialized)
+        {
+            groundPos = isLeft ? _leftPlantedPos : _rightPlantedPos;
+            groundRot = isLeft ? _leftPlantedRot : _rightPlantedRot;
+        }
+        else
+        {
+            groundPos = home != null ? home.position : transform.position;
+            groundRot = Quaternion.identity;
+        }
         return false;
     }
 
@@ -591,8 +707,8 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
 
                 if (reHit.collider != null && Vector2.Angle(reHit.normal, Vector2.up) <= _maxSlopeAngle)
                 {
-                    float newGroundY = reHit.point.y + _footYOffset;
-                    Vector3 reValidatedPos = new Vector3(clampedX, newGroundY, targetPos.z);
+                    Vector3 rePoint = (Vector3)reHit.point + (Vector3)(reHit.normal * _footYOffset);
+                    Vector3 reValidatedPos = new Vector3(clampedX, rePoint.y, targetPos.z);
 
                     if ((reValidatedPos - hip.position).magnitude <= allowedReach * 1.08f)
                     {
@@ -601,7 +717,8 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
                 }
             }
 
-            return hip.position + clampedDir * allowedReach;
+            // P0: jangan pernah kembalikan posisi di udara. Pertahankan target ground asli.
+            return targetPos;
         }
 
         return targetPos;
@@ -631,5 +748,12 @@ public class ProceduralBipedLeg2DRebuild : MonoBehaviour
 
         Gizmos.color = (_activeSwingLeg == ActiveLeg.Right) ? Color.magenta : Color.yellow;
         Gizmos.DrawWireSphere(_rightPlantedPos, 0.06f);
+
+        // P0 debug: cached ground samples
+        Gizmos.color = _leftSample.valid ? Color.green : Color.red;
+        Gizmos.DrawWireSphere(_leftSample.point, 0.035f);
+
+        Gizmos.color = _rightSample.valid ? Color.green : Color.red;
+        Gizmos.DrawWireSphere(_rightSample.point, 0.035f);
     }
 }
