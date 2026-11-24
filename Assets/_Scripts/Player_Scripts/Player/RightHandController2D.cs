@@ -43,6 +43,40 @@ public class RightHandController2D : MonoBehaviour
 
     public WeaponLogic EquippedWeapon => _equippedWeapon;
 
+    // Direction API for combat VFX. Facing controls sprite mirroring;
+    // aim controls the world-space orientation of the slash.
+    public float FacingDirection
+    {
+        get
+        {
+            if (_gfxTransform == null || Mathf.Abs(_gfxTransform.localScale.x) < 0.0001f)
+                return 1f;
+
+            return Mathf.Sign(_gfxTransform.localScale.x);
+        }
+    }
+
+    public Vector2 AimDirection
+    {
+        get
+        {
+            if (_aimTracker == null)
+                _aimTracker = GetComponent<PlayerAimTracker2D>();
+
+            if (_aimTracker == null)
+                return Vector2.right * FacingDirection;
+
+            Vector2 origin = _rightShoulderPivot != null
+                ? (Vector2)_rightShoulderPivot.position
+                : (Vector2)transform.position;
+
+            Vector2 direction = (Vector2)_aimTracker.MouseWorldPosition - origin;
+            return direction.sqrMagnitude > 0.0001f
+                ? direction.normalized
+                : Vector2.right * FacingDirection;
+        }
+    }
+
     private void Start()
     {
         if (_aimTracker == null) _aimTracker = GetComponent<PlayerAimTracker2D>();

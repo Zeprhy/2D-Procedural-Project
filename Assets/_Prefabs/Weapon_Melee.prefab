@@ -58,7 +58,7 @@ TrailRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: dead3bd2445375d419e3fc35a71c70b8, type: 2}
+  - {fileID: 10308, guid: 0000000000000000f000000000000000, type: 0}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -82,7 +82,7 @@ TrailRenderer:
   m_SortingOrder: 20
   m_MaskInteraction: 0
   m_Time: 0.22
-  m_PreviewTimeScale: 0
+  m_PreviewTimeScale: 1
   m_Parameters:
     serializedVersion: 3
     widthMultiplier: 0.084353514
@@ -415,6 +415,11 @@ MonoBehaviour:
   _criticalLifetime: 0.11
   _criticalOffset: {x: 0, y: 0}
   _randomizeCriticalRotation: 1
+  _energyImpactSprites: []
+  _energyImpactScale: {x: 1.2, y: 1.2, z: 1}
+  _energyImpactLifetime: 0.08
+  _energyImpactOffset: {x: 0, y: 0}
+  _randomizeEnergyImpactRotation: 1
 --- !u!114 &3898418053216416077
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -546,7 +551,7 @@ MonoBehaviour:
   _initialEmitting: 0
   _enableGhostSlash: 1
   _ghostSlashPrefab: {fileID: 6926305354406631471, guid: 7a5f7ef2302acab4fac3ca4a5b291716, type: 3}
-  _ghostSlashSprite: {fileID: 921647689448838404, guid: 766b11de7a8b74f41ab94bd32aa906b4, type: 3}
+  _ghostSlashSprite: {fileID: 21300000, guid: 69931c14daf7ab54792e6e91c26b1434, type: 3}
   _arcMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
   _arcColor: {r: 1, g: 1, b: 1, a: 0.85}
   _arcLifetime: 0.28
@@ -622,6 +627,9 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  _arcSortingLayerName: 
+  _overrideArcSortingOrder: 0
+  _arcSortingOrder: 0
   _maxSwingSamples: 96
   _sampleMinDistance: 0.02
   _swingSparks: {fileID: 6906092928813642593, guid: d0978aaf95df76d4ba1b4722d3c75383, type: 3}

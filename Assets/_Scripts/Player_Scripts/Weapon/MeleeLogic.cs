@@ -47,6 +47,7 @@ public class MeleeLogic : WeaponLogic
     [SerializeField] private float _playerRecoilForce = 3.5f;
 
     private PolygonCollider2D _hitbox;
+    private RightHandController2D _rightHandController;
     private readonly HashSet<IDamageable> _coolingDownTargets = new HashSet<IDamageable>();
 
     // Trajectory Ring Buffer
@@ -95,6 +96,8 @@ public class MeleeLogic : WeaponLogic
 
         if (_trailVFX == null)
             _trailVFX = GetComponentInChildren<MeleeTrailVFXController>(true);
+
+        _rightHandController = GetComponentInParent<RightHandController2D>();
     }
 
     private void Update()
@@ -113,6 +116,7 @@ public class MeleeLogic : WeaponLogic
             _trailVFX.CancelSlash();
 
         IsAttacking = false;
+        _rightHandController = null;
 
         if (_hitbox != null)
             _hitbox.enabled = false;
@@ -140,10 +144,16 @@ public class MeleeLogic : WeaponLogic
 
     public void PerformMeleeSlash(GameObject owner, MeleeWeaponSO data)
     {
-        if (gameObject.activeInHierarchy)
+        if (!gameObject.activeInHierarchy || IsAttacking)
+            return;
+
+        if (owner != null)
         {
-            StartCoroutine(SlashRoutine(data));
+            _currentOwner = owner;
+            _rightHandController = owner.GetComponentInChildren<RightHandController2D>(true);
         }
+
+        StartCoroutine(SlashRoutine(data));
     }
 
     private IEnumerator SlashRoutine(MeleeWeaponSO data)
@@ -157,7 +167,30 @@ public class MeleeLogic : WeaponLogic
         RecordTrajectorySample();
 
         if (_trailVFX != null)
-            _trailVFX.BeginSlash();
+        {
+            Vector2 aimDirection = Vector2.right;
+            float facingDirection = 1f;
+
+            if (_rightHandController != null)
+            {
+                aimDirection = _rightHandController.AimDirection;
+                facingDirection = _rightHandController.FacingDirection;
+            }
+            else
+            {
+                if (_weaponTip != null)
+                {
+                    Vector2 fallbackDirection = _weaponTip.position - transform.position;
+                    if (fallbackDirection.sqrMagnitude > 0.0001f)
+                        aimDirection = fallbackDirection.normalized;
+                }
+
+                if (_currentOwner != null && Mathf.Abs(_currentOwner.transform.lossyScale.x) > 0.0001f)
+                    facingDirection = Mathf.Sign(_currentOwner.transform.lossyScale.x);
+            }
+
+            _trailVFX.BeginSlash(aimDirection, facingDirection);
+        }
 
         // Hitbox tetap aktif sepanjang attack window tanpa terpengaruh penahanan tombol mouse
         float duration = (data != null && data.AttackCooldown > 0f) ? data.AttackCooldown : 0.4f;
@@ -165,6 +198,7 @@ public class MeleeLogic : WeaponLogic
         yield return new WaitForSeconds(duration);
 
         IsAttacking = false;
+        _rightHandController = null;
 
         if (_hitbox != null)
             _hitbox.enabled = false;
@@ -330,10 +364,12 @@ public class MeleeLogic : WeaponLogic
     {
         if (_trajectoryBuffer.Count < 2) return false;
 
-        TipSample[] samples = _trajectoryBuffer.ToArray();
+        // Queue.Peek + foreach avoids allocating a new array on every damage evaluation.
+        TipSample oldestSample = _trajectoryBuffer.Peek();
+        TipSample newestSample = oldestSample;
 
-        TipSample oldestSample = samples[0];
-        TipSample newestSample = samples[samples.Length - 1];
+        foreach (TipSample sample in _trajectoryBuffer)
+            newestSample = sample;
 
         float deltaT = newestSample.Time - oldestSample.Time;
         if (deltaT <= 0.0001f) return false;

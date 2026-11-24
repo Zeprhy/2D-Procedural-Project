@@ -4,7 +4,7 @@ using System.Collections;
 public class GunLogic : WeaponLogic
 {
     [Header("Transform Referensi Senjata Api")]
-    [Tooltip("Titik keluarnya proyektil (Muzzle Point)")]
+    [Tooltip("Titik keluarnya proyektil (Muzzle_Point/Fire_Point)")]
     [SerializeField] private Transform _firePoint;
     [Tooltip("Transform visual sprite senjata untuk kickback visual (jika kosong, auto-detect child Weapon_Sprite)")]
     [SerializeField] private Transform _visualTransform;
@@ -16,12 +16,19 @@ public class GunLogic : WeaponLogic
     [Header("Sistem Energi Bersama")]
     [SerializeField] protected GunEnergyCore _energyCore;
 
-    [Header("Shooting VFX")]
-    [Tooltip("SpriteRenderer Muzzle Flash yang akan berkedip singkat saat menembak")]
-    [SerializeField] private SpriteRenderer _muzzleFlashRenderer;
-    [SerializeField] private float _muzzleFlashDuration = 0.05f;
-    [Tooltip("Particle System pelepasan energi singkat di moncong senjata")]
-    [SerializeField] private ParticleSystem _energyBurstParticles;
+    [Header("Directional Energy Burst (Sprite Utama)")]
+    [Tooltip("SpriteRenderer Energy Burst pada child Muzzle_Point/Energy_Burst")]
+    [SerializeField] private SpriteRenderer _energyBurstRenderer;
+    [Tooltip("Variasi sprite semburan energi tajam memanjang")]
+    [SerializeField] private Sprite[] _energyBurstSprites;
+    [Tooltip("Skala visual semburan energi")]
+    [SerializeField] private Vector3 _energyBurstScale = Vector3.one;
+    [Tooltip("Durasi tampil semburan energi sebelum menghilang otomatis")]
+    [SerializeField] private float _energyBurstDuration = 0.045f;
+
+    [Header("Energy Burst Particle Accent (Aksen Tambahan)")]
+    [Tooltip("Particle System percikan kecil (2-4 sparks) di sekitar FirePoint")]
+    [SerializeField] private ParticleSystem _energyBurstSparks;
 
     [Header("Overheat Steam VFX")]
     [Tooltip("Particle System uap panas yang keluar saat senjata Overheat")]
@@ -40,7 +47,7 @@ public class GunLogic : WeaponLogic
 
     private float _fireCooldownTimer;
     private bool _isTriggerHeld;
-    private Coroutine _muzzleFlashRoutine;
+    private Coroutine _energyBurstRoutine;
     private PlayerAimTracker2D _aimTracker;
 
     protected override void Awake()
@@ -48,12 +55,22 @@ public class GunLogic : WeaponLogic
         base.Awake();
         _aimTracker = FindFirstObjectByType<PlayerAimTracker2D>();
 
+        // 1. Auto-find Fire Point yang presisi (Cari Fire_Point di dalam Muzzle_Point)
         if (_firePoint == null)
         {
-            Transform muzzle = transform.Find("Muzzle_Point");
-            if (muzzle != null) _firePoint = muzzle;
+            Transform preciseFirePoint = transform.Find("Muzzle_Point/Fire_Point");
+            if (preciseFirePoint != null)
+            {
+                _firePoint = preciseFirePoint;
+            }
+            else
+            {
+                Transform muzzle = transform.Find("Muzzle_Point");
+                if (muzzle != null) _firePoint = muzzle;
+            }
         }
 
+        // 2. Auto-find Visual Transform untuk kickback senjata
         if (_visualTransform == null)
         {
             Transform spriteChild = transform.Find("Weapon_Sprite");
@@ -66,8 +83,30 @@ public class GunLogic : WeaponLogic
             _visualInitialLocalRot = _visualTransform.localRotation;
         }
 
-        if (_muzzleFlashRenderer != null)
-            _muzzleFlashRenderer.enabled = false;
+        // 3. Auto-find SpriteRenderer Energy Burst
+        if (_energyBurstRenderer == null)
+        {
+            Transform burstObj = transform.Find("Muzzle_Point/Energy_Burst");
+            if (burstObj != null) _energyBurstRenderer = burstObj.GetComponent<SpriteRenderer>();
+        }
+
+        if (_energyBurstRenderer != null)
+            _energyBurstRenderer.enabled = false;
+
+        // 4. Auto-find Particle System Sparks Accent
+        if (_energyBurstSparks == null)
+        {
+            Transform sparksObj = transform.Find("Muzzle_Point/Energy_Sparks");
+            if (sparksObj != null) _energyBurstSparks = sparksObj.GetComponent<ParticleSystem>();
+            else if (_energyBurstRenderer != null) _energyBurstSparks = _energyBurstRenderer.GetComponent<ParticleSystem>();
+        }
+
+        // 5. Auto-find Overheat Steam ParticleSystem
+        if (_overheatSteamParticles == null)
+        {
+            Transform steamObj = transform.Find("Muzzle_Point/Overheat_Steam");
+            if (steamObj != null) _overheatSteamParticles = steamObj.GetComponent<ParticleSystem>();
+        }
 
         if (_overheatSteamParticles != null && _overheatSteamParticles.isPlaying)
             _overheatSteamParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -88,14 +127,18 @@ public class GunLogic : WeaponLogic
         if (_energyCore != null)
             _energyCore.OnStateChanged -= HandleEnergyStateChanged;
 
-        if (_muzzleFlashRoutine != null)
+        // Bersihkan state visual moncong seketika saat dinonaktifkan
+        if (_energyBurstRoutine != null)
         {
-            StopCoroutine(_muzzleFlashRoutine);
-            _muzzleFlashRoutine = null;
+            StopCoroutine(_energyBurstRoutine);
+            _energyBurstRoutine = null;
         }
 
-        if (_muzzleFlashRenderer != null)
-            _muzzleFlashRenderer.enabled = false;
+        if (_energyBurstRenderer != null)
+            _energyBurstRenderer.enabled = false;
+
+        if (_energyBurstSparks != null && _energyBurstSparks.isPlaying)
+            _energyBurstSparks.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
         if (_overheatSteamParticles != null)
             _overheatSteamParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -194,14 +237,19 @@ public class GunLogic : WeaponLogic
         if (gunData == null || gunData.ProjectilePrefab == null || FirePoint == null || _energyCore == null)
             return;
 
+        // 1. Validasi Baterai & Overheat Atomik
         if (!_energyCore.TryConsumeShot()) return;
 
+        // 2. Spawn Proyektil Energi
         Vector2 fireDir = SpawnEnergyProjectile(gunData, owner);
 
+        // 3. Picu Feedback Tembakan
         ApplyWeaponRecoil(gunData);
         ApplyAimRecoil(gunData);
         ApplyPlayerPush(gunData, owner, fireDir);
-        TriggerMuzzleEffects();
+
+        // 4. Picu Directional Burst Sprite & Particle Accent
+        TriggerDirectionalBurst(fireDir);
 
         _fireCooldownTimer = gunData.FireRate;
     }
@@ -218,6 +266,7 @@ public class GunLogic : WeaponLogic
             baseDirection = FirePoint.right;
 
         baseDirection.Normalize();
+
         float facingDir = Mathf.Sign(transform.lossyScale.x);
         Vector2 finalFireDirection = Quaternion.Euler(0f, 0f, CurrentAimRecoil * facingDir) * baseDirection;
 
@@ -268,7 +317,6 @@ public class GunLogic : WeaponLogic
 
         if (movement != null)
         {
-            // Dorong berlawanan dari arah horizontal tembakan
             float fireDirX = Mathf.Sign(fireDirection.x);
             movement.ApplyMicroRecoil(gunData.PlayerPushForce, fireDirX);
         }
@@ -280,7 +328,6 @@ public class GunLogic : WeaponLogic
         float weaponRecovery = gunData != null ? gunData.WeaponRecoilRecoverySpeed : 16f;
         float aimRecovery = gunData != null ? gunData.AimRecoilRecoverySpeed : 18f;
 
-        // Pemulihan Visual Senjata
         _currentVisualRecoilPos = Vector3.Lerp(_currentVisualRecoilPos, Vector3.zero, Time.deltaTime * weaponRecovery);
         _currentVisualRecoilRot = Mathf.Lerp(_currentVisualRecoilRot, 0f, Time.deltaTime * weaponRecovery);
 
@@ -295,31 +342,54 @@ public class GunLogic : WeaponLogic
 
     #endregion
 
-    #region Shooting VFX Logic
+    #region Directional Energy Burst & Particle Accent
 
-    private void TriggerMuzzleEffects()
+    private void TriggerDirectionalBurst(Vector2 fireDirection)
     {
-
-        if (_energyBurstParticles != null)
+        // 1. AKSI UTAMA: DIRECTIONAL BURST SPRITE
+        if (_energyBurstRenderer != null)
         {
-            _energyBurstParticles.Play();
+            // Pastikan posisi letupan terkunci presisi di titik FirePoint (tidak mengambang ke kursor)
+            _energyBurstRenderer.transform.position = FirePoint.position;
+
+            // Pilih variasi sprite acak jika tersedia
+            if (_energyBurstSprites != null && _energyBurstSprites.Length > 0)
+            {
+                Sprite randomSprite = _energyBurstSprites[Random.Range(0, _energyBurstSprites.Length)];
+                if (randomSprite != null)
+                    _energyBurstRenderer.sprite = randomSprite;
+            }
+
+            // Orientasi semburan memanjang mengikuti sudut tembakan peluru
+            float angle = Mathf.Atan2(fireDirection.y, fireDirection.x) * Mathf.Rad2Deg;
+            _energyBurstRenderer.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            _energyBurstRenderer.transform.localScale = _energyBurstScale;
+
+            // Hentikan coroutine sebelumnya jika tembakan terjadi sangat cepat (rapid fire safe)
+            if (_energyBurstRoutine != null)
+                StopCoroutine(_energyBurstRoutine);
+
+            _energyBurstRoutine = StartCoroutine(EnergyBurstRoutine());
         }
 
-        if (_muzzleFlashRenderer != null)
+        // 2. AKSEN TAMBAHAN: PARTICLE SPARKS
+        if (_energyBurstSparks != null)
         {
-            if (_muzzleFlashRoutine != null)
-                StopCoroutine(_muzzleFlashRoutine);
+            _energyBurstSparks.transform.position = FirePoint.position;
+            float angle = Mathf.Atan2(fireDirection.y, fireDirection.x) * Mathf.Rad2Deg;
+            _energyBurstSparks.transform.rotation = Quaternion.Euler(0f, 0f, angle);
 
-            _muzzleFlashRoutine = StartCoroutine(MuzzleFlashRoutine());
+            _energyBurstSparks.Play();
         }
     }
 
-    private IEnumerator MuzzleFlashRoutine()
+    private IEnumerator EnergyBurstRoutine()
     {
-        _muzzleFlashRenderer.enabled = true;
-        yield return new WaitForSeconds(_muzzleFlashDuration);
-        _muzzleFlashRenderer.enabled = false;
-        _muzzleFlashRoutine = null;
+        _energyBurstRenderer.enabled = true;
+        yield return new WaitForSeconds(_energyBurstDuration);
+        if (_energyBurstRenderer != null)
+            _energyBurstRenderer.enabled = false;
+        _energyBurstRoutine = null;
     }
 
     #endregion

@@ -20,12 +20,12 @@ public class MeleeTrailVFXController : MonoBehaviour
     [SerializeField] private float _trailTime = 0.22f;
     [SerializeField] private float _startWidth = 0.14f;
     [SerializeField] private float _endWidth = 0.01f;
-    [Tooltip("Jika aktif, lebar trail memakai kurva (nilai kurva = lebar world units).")]
+    [Tooltip("Width Curve adalah multiplier terhadap Start Width, bukan world units.")]
     [SerializeField] private bool _useWidthCurve = true;
     [SerializeField] private AnimationCurve _widthCurve = new AnimationCurve(
-        new Keyframe(0f, 0.05f),
-        new Keyframe(0.18f, 0.16f),
-        new Keyframe(0.55f, 0.10f),
+        new Keyframe(0f, 0.85f),
+        new Keyframe(0.18f, 1.15f),
+        new Keyframe(0.55f, 0.70f),
         new Keyframe(1f, 0f));
     [Tooltip("Gradient warna trail. Kosong = gradient default.")]
     [SerializeField] private Gradient _colorGradient;
@@ -60,6 +60,11 @@ public class MeleeTrailVFXController : MonoBehaviour
         new Keyframe(0f, 0.85f),
         new Keyframe(0.25f, 1f),
         new Keyframe(1f, 1.08f));
+    [Tooltip("Sorting Layer untuk Ghost Slash. Kosong = gunakan setting prefab.")]
+    [SerializeField] private string _arcSortingLayerName = "";
+    [Tooltip("Jika aktif, override Order in Layer prefab.")]
+    [SerializeField] private bool _overrideArcSortingOrder = false;
+    [SerializeField] private int _arcSortingOrder = 0;
     [SerializeField] private int _maxSwingSamples = 96;
     [SerializeField] private float _sampleMinDistance = 0.02f;
 
@@ -69,6 +74,9 @@ public class MeleeTrailVFXController : MonoBehaviour
 
     private int _activeSlashCount;
     private bool _trailWarned;
+    private bool _trailSettingsApplied;
+    private Vector2 _slashAimDirection = Vector2.right;
+    private float _slashFacingDirection = 1f;
     private readonly List<Vector3> _swingSamples = new List<Vector3>(96);
     private readonly Queue<GhostSlashArc> _arcPool = new Queue<GhostSlashArc>();
     private readonly List<GhostSlashArc> _activeArcs = new List<GhostSlashArc>();
@@ -150,6 +158,15 @@ public class MeleeTrailVFXController : MonoBehaviour
 
     public void BeginSlash()
     {
+        BeginSlash(Vector2.right, 1f);
+    }
+
+    public void BeginSlash(Vector2 aimDirection, float facingDirection)
+    {
+        if (aimDirection.sqrMagnitude > 0.0001f)
+            _slashAimDirection = aimDirection.normalized;
+
+        _slashFacingDirection = facingDirection < 0f ? -1f : 1f;
         Transform tip = EnsureTip();
 
         if (_activeSlashCount == 0)
@@ -218,10 +235,8 @@ public class MeleeTrailVFXController : MonoBehaviour
 
     private bool EnsureTrail()
     {
-        if (_trail != null)
-            return true;
-
-        _trail = GetComponent<TrailRenderer>();
+        if (_trail == null)
+            _trail = GetComponent<TrailRenderer>();
 
         if (_trail == null)
             _trail = GetComponentInChildren<TrailRenderer>(true);
@@ -238,8 +253,11 @@ public class MeleeTrailVFXController : MonoBehaviour
             return false;
         }
 
-        if (_applySettingsOnAwake)
+        if (_applySettingsOnAwake && !_trailSettingsApplied)
+        {
             ApplyTrailSettings();
+            _trailSettingsApplied = true;
+        }
 
         return true;
     }
@@ -261,6 +279,9 @@ public class MeleeTrailVFXController : MonoBehaviour
 
     private void ApplyTrailSettings()
     {
+        if (_trail == null)
+            return;
+
         _trail.time = Mathf.Max(0.01f, _trailTime);
         _trail.startWidth = Mathf.Max(0.001f, _startWidth);
         _trail.endWidth = Mathf.Max(0.001f, _endWidth);
@@ -343,14 +364,24 @@ public class MeleeTrailVFXController : MonoBehaviour
         Vector3 anchor = _swingSamples[n / 2];
         anchor.z = 0f;
 
-        float angle = Mathf.Atan2(chord.y, chord.x) * Mathf.Rad2Deg;
+        Vector2 orientation = _slashAimDirection.sqrMagnitude > 0.0001f
+            ? _slashAimDirection.normalized
+            : new Vector2(chord.x, chord.y).normalized;
 
+        float angle = Mathf.Atan2(orientation.y, orientation.x) * Mathf.Rad2Deg;
+
+        // Aim menentukan arah world-space. Facing menormalkan sisi lengkungan agar
+        // hasil ayunan kiri/kanan tetap menjadi pasangan yang konsisten.
         float flip = (crossSum >= 0f) ? 1f : -1f;
+        flip *= _slashFacingDirection;
         if (_invertArcFlip)
             flip = -flip;
 
         float scaleX = Mathf.Clamp(chordLen * _arcScalePerUnit, _arcMinScale, _arcMaxScale);
-        Vector3 scale = new Vector3(scaleX, scaleX * _arcThicknessRatio * flip, 1f);
+        Vector3 scale = new Vector3(
+            scaleX,
+            scaleX * _arcThicknessRatio * flip,
+            1f);
 
         GhostSlashArc arc = AcquireArc();
         if (arc == null)
@@ -362,10 +393,29 @@ public class MeleeTrailVFXController : MonoBehaviour
         arc.transform.rotation = Quaternion.Euler(0f, 0f, angle);
         arc.transform.localScale = scale;
 
-        Sprite sprite = ResolveArcSprite();
-        arc.Play(sprite, _arcColor, _arcLifetime, _arcAlphaCurve, _arcScaleCurve, OnArcFinished);
+        SpriteRenderer arcRenderer = arc.GetComponent<SpriteRenderer>();
+        if (arcRenderer != null)
+        {
+            if (_arcMaterial != null)
+                arcRenderer.sharedMaterial = _arcMaterial;
 
+            if (!string.IsNullOrEmpty(_arcSortingLayerName))
+                arcRenderer.sortingLayerName = _arcSortingLayerName;
+
+            if (_overrideArcSortingOrder)
+                arcRenderer.sortingOrder = _arcSortingOrder;
+        }
+
+        Sprite sprite = ResolveArcSprite();
         _activeArcs.Add(arc);
+
+        if (!arc.Play(sprite, _arcColor, _arcLifetime, _arcAlphaCurve, _arcScaleCurve, OnArcFinished))
+        {
+            _activeArcs.Remove(arc);
+            arc.ForceStop();
+            arc.gameObject.SetActive(false);
+            _arcPool.Enqueue(arc);
+        }
     }
 
     private Sprite ResolveArcSprite()
@@ -393,6 +443,9 @@ public class MeleeTrailVFXController : MonoBehaviour
         {
             GameObject go = Instantiate(_ghostSlashPrefab);
             GhostSlashArc arc = go.GetComponent<GhostSlashArc>();
+            if (go.GetComponent<SpriteRenderer>() == null)
+                go.AddComponent<SpriteRenderer>();
+
             if (arc == null)
                 arc = go.AddComponent<GhostSlashArc>();
             return arc;
@@ -401,10 +454,10 @@ public class MeleeTrailVFXController : MonoBehaviour
         GameObject procedural = new GameObject("GhostSlashArc_Procedural", typeof(SpriteRenderer), typeof(GhostSlashArc));
         SpriteRenderer sr = procedural.GetComponent<SpriteRenderer>();
 
+        // Biarkan Unity memakai default SpriteRenderer material jika tidak ada override.
+        // Hindari new Material() runtime yang memerlukan lifecycle cleanup.
         if (_arcMaterial != null)
-            sr.material = _arcMaterial;
-        else
-            sr.material = new Material(Shader.Find("Sprites/Default"));
+            sr.sharedMaterial = _arcMaterial;
 
         sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         sr.receiveShadows = false;

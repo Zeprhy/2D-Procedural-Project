@@ -77,7 +77,6 @@ public class EnergyProjectile2D : MonoBehaviour
         if (vfxController != null) _vfxController = vfxController;
         if (damageTextPrefab != null) _damageTextPrefab = damageTextPrefab;
 
-        // Abaikan tabrakan fisik dengan tubuh pemain
         if (_owner != null)
         {
             Collider2D[] ownerColliders = _owner.GetComponentsInChildren<Collider2D>();
@@ -106,7 +105,6 @@ public class EnergyProjectile2D : MonoBehaviour
         if (collision.GetComponent<EnergyProjectile2D>() != null)
             return;
 
-        // 1. CEK TARGET MUSUH (IDamageable)
         bool isTargetLayer = (_targetLayer.value == 0) || (((1 << collision.gameObject.layer) & _targetLayer.value) != 0);
 
         if (isTargetLayer)
@@ -145,7 +143,6 @@ public class EnergyProjectile2D : MonoBehaviour
             }
         }
 
-        // 2. CEK RINTANGAN LINGKUNGAN (Ground & Wall)
         if (((1 << collision.gameObject.layer) & _obstacleLayer.value) != 0)
         {
             _hasHit = true;

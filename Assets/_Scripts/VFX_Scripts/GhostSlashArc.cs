@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
+[RequireComponent(typeof(SpriteRenderer))]
 public class GhostSlashArc : MonoBehaviour
 {
     [SerializeField] private SpriteRenderer _renderer;
@@ -18,17 +19,14 @@ public class GhostSlashArc : MonoBehaviour
     /// <summary>
     /// sprite = null berarti pertahankan sprite yang sudah ada di renderer (mis. bawaan prefab).
     /// </summary>
-    public void Play(Sprite sprite, Color color, float lifetime, AnimationCurve alphaCurve,
+    public bool Play(Sprite sprite, Color color, float lifetime, AnimationCurve alphaCurve,
                      AnimationCurve scaleCurve, System.Action<GhostSlashArc> onFinished)
     {
         if (_renderer == null)
             _renderer = GetComponent<SpriteRenderer>();
 
         if (_renderer == null || lifetime <= 0f)
-        {
-            if (onFinished != null) onFinished(this);
-            return;
-        }
+            return false;
 
         if (_routine != null)
         {
@@ -45,6 +43,7 @@ public class GhostSlashArc : MonoBehaviour
         _onFinished = onFinished;
 
         _routine = StartCoroutine(FadeRoutine(lifetime, alphaCurve, scaleCurve));
+        return true;
     }
 
     public void ForceStop()
