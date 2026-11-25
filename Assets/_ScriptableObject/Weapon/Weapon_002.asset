@@ -54,7 +54,7 @@ MonoBehaviour:
   _aimRecoilRecoverySpeed: 18
   _playerPushForce: 2.2
   _projectilePrefab: {fileID: 9102070951830155043, guid: 347d28477b1d0e145a5f8823b90cc682, type: 3}
-  _shootClip: {fileID: 0}
+  _shootClip: {fileID: 8300000, guid: f4fb1d0cb98fd534d93ad75d68be95c2, type: 3}
   _impactEnemyClip: {fileID: 8300000, guid: b6f63346b66bd024888c6c0a49a532fe, type: 3}
   _impactWallClip: {fileID: 8300000, guid: c095097b507f05546b952d7f234bb2e9, type: 3}
   _emptyClickClip: {fileID: 8300000, guid: cf1393e29dfb3d942a0adccd7b399554, type: 3}

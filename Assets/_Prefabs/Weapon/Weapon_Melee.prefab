@@ -549,7 +549,7 @@ MonoBehaviour:
   _trailMaterial: {fileID: 2100000, guid: dead3bd2445375d419e3fc35a71c70b8, type: 2}
   _minVertexDistance: 0.01
   _initialEmitting: 0
-  _enableGhostSlash: 1
+  _enableGhostSlash: 0
   _ghostSlashPrefab: {fileID: 6926305354406631471, guid: 7a5f7ef2302acab4fac3ca4a5b291716, type: 3}
   _ghostSlashSprite: {fileID: 21300000, guid: 69931c14daf7ab54792e6e91c26b1434, type: 3}
   _arcMaterial: {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
