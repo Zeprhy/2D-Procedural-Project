@@ -10081,10 +10081,8 @@ MonoBehaviour:
   _sortingLayerName: VFX
   _sortingOrder: 100
   _normalHitSprites:
-  - {fileID: 1058870447991651278, guid: bde271a6ba95a9c49a95d6eb0159b146, type: 3}
-  - {fileID: -1899034223220819221, guid: bde271a6ba95a9c49a95d6eb0159b146, type: 3}
-  - {fileID: 8825736434059257243, guid: bde271a6ba95a9c49a95d6eb0159b146, type: 3}
-  - {fileID: -8683019937036654884, guid: bde271a6ba95a9c49a95d6eb0159b146, type: 3}
+  - {fileID: 7063264832327057284, guid: ae247eff0abe14042a10006f64ded0b7, type: 3}
+  - {fileID: -7998297767122191060, guid: ae247eff0abe14042a10006f64ded0b7, type: 3}
   _normalScale: {x: 1, y: 1, z: 1}
   _normalLifetime: 0.07
   _normalOffset: {x: 0, y: 0}
