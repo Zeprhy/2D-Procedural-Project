@@ -10087,13 +10087,14 @@ MonoBehaviour:
   _normalLifetime: 0.07
   _normalOffset: {x: 0, y: 0}
   _criticalHitSprites:
-  - {fileID: 21300000, guid: 1e1d3e47940ab3e4b934513a227bcd4d, type: 3}
+  - {fileID: -1046887572106583053, guid: 766b11de7a8b74f41ab94bd32aa906b4, type: 3}
   _criticalScale: {x: 1.5, y: 1.5, z: 1}
   _criticalLifetime: 0.11
   _criticalOffset: {x: 0, y: 0}
   _randomizeCriticalRotation: 1
   _energyImpactSprites:
-  - {fileID: -7213190625717059048, guid: 766b11de7a8b74f41ab94bd32aa906b4, type: 3}
+  - {fileID: 7063264832327057284, guid: ae247eff0abe14042a10006f64ded0b7, type: 3}
+  - {fileID: -7998297767122191060, guid: ae247eff0abe14042a10006f64ded0b7, type: 3}
   _energyImpactScale: {x: 1.2, y: 1.2, z: 1}
   _energyImpactLifetime: 0.08
   _energyImpactOffset: {x: 0, y: 0}

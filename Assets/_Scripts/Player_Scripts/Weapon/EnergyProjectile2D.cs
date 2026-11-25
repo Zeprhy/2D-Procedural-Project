@@ -21,6 +21,11 @@ public class EnergyProjectile2D : MonoBehaviour
     [SerializeField] private CombatVFXController _vfxController;
     [SerializeField] private DamagePopUp2D _damageTextPrefab;
 
+    // SFX References (set via Initialize from GunWeaponSO)
+    private AudioClip _impactEnemyClip;
+    private AudioClip _impactWallClip;
+    private float _impactPitchVariation;
+
     private Rigidbody2D _rb;
     private Collider2D _col;
     private GameObject _owner;
@@ -63,7 +68,8 @@ public class EnergyProjectile2D : MonoBehaviour
         LayerMask obstacleLayer, 
         GameObject owner,
         CombatVFXController vfxController = null,
-        DamagePopUp2D damageTextPrefab = null)
+        DamagePopUp2D damageTextPrefab = null,
+        GunWeaponSO gunData = null)
     {
         _damage = damage;
         _speed = speed;
@@ -76,6 +82,14 @@ public class EnergyProjectile2D : MonoBehaviour
 
         if (vfxController != null) _vfxController = vfxController;
         if (damageTextPrefab != null) _damageTextPrefab = damageTextPrefab;
+
+        // Cache SFX from GunWeaponSO
+        if (gunData != null)
+        {
+            _impactEnemyClip = gunData.ImpactEnemyClip;
+            _impactWallClip = gunData.ImpactWallClip;
+            _impactPitchVariation = gunData.ImpactPitchVariation;
+        }
 
         if (_owner != null)
         {
@@ -132,7 +146,13 @@ public class EnergyProjectile2D : MonoBehaviour
                 // D. Directional Hit VFX
                 if (_vfxController != null)
                 {
-                    _vfxController.PlayNormalHit(contactPoint, knockbackDir);
+                    _vfxController.PlayEnergyImpact(contactPoint, knockbackDir);
+                }
+
+                // SFX: Bullet impact enemy
+                if (_impactEnemyClip != null && AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.PlaySFX(_impactEnemyClip, contactPoint, 1f, _impactPitchVariation);
                 }
 
                 // E. Terapkan Damage ke Musuh (Memicu White Flash & Squash)
@@ -146,6 +166,13 @@ public class EnergyProjectile2D : MonoBehaviour
         if (((1 << collision.gameObject.layer) & _obstacleLayer.value) != 0)
         {
             _hasHit = true;
+
+            // SFX: Bullet impact wall/obstacle
+            if (_impactWallClip != null && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(_impactWallClip, transform.position, 1f, _impactPitchVariation);
+            }
+
             Despawn();
             return;
         }

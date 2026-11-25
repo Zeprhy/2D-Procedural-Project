@@ -22,15 +22,26 @@ MonoBehaviour:
   _weaponPrefab: {fileID: 7401909469059623903, guid: 437ffe3a4ad95de4596cea896b5c3d17, type: 3}
   _secondaryWeaponPrefab: {fileID: 7401909469059623903, guid: 437ffe3a4ad95de4596cea896b5c3d17, type: 3}
   _worldItemSprite: {fileID: 3484287900037411390, guid: 098ad49204c6a974bb450e24646ef919, type: 3}
+  _overrideArmConfig: 0
+  _minReach: 0.2
+  _maxReach: 0.58
+  _springStiffness: 130
+  _springDamping: 14
+  _minAimAngle: -55
+  _maxAimAngle: 70
+  _aimLagTime: 0.12
+  _handAngleOffset: -20
+  _idleOffset: {x: 0.12, y: -0.35}
+  _idleAngle: -65
   _damagePerShot: 18
   _fireRate: 0.25
   _projectileSpeed: 22
   _projectileLifetime: 2.5
-  _maxBattery: 500
+  _maxBattery: 300
   _batteryCostPerShot: 10
-  _batteryRegenRate: 25
+  _batteryRegenRate: 30
   _maxHeat: 250
-  _heatPerShot: 15
+  _heatPerShot: 20
   _heatDissipationRate: 20
   _idleDelay: 1.75
   _overheatCooldown: 2.5
@@ -43,3 +54,10 @@ MonoBehaviour:
   _aimRecoilRecoverySpeed: 18
   _playerPushForce: 2.2
   _projectilePrefab: {fileID: 9102070951830155043, guid: 347d28477b1d0e145a5f8823b90cc682, type: 3}
+  _shootClip: {fileID: 0}
+  _impactEnemyClip: {fileID: 8300000, guid: b6f63346b66bd024888c6c0a49a532fe, type: 3}
+  _impactWallClip: {fileID: 8300000, guid: c095097b507f05546b952d7f234bb2e9, type: 3}
+  _emptyClickClip: {fileID: 8300000, guid: cf1393e29dfb3d942a0adccd7b399554, type: 3}
+  _overheatClip: {fileID: 8300000, guid: 5afe91a6ec473da48bdfc98fa5980864, type: 3}
+  _shootPitchVariation: 0.1
+  _impactPitchVariation: 0.15

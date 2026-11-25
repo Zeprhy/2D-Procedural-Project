@@ -282,9 +282,31 @@ public class GunLogic : WeaponLogic
         if (gunData == null || gunData.ProjectilePrefab == null || FirePoint == null || _energyCore == null)
             return;
 
-        if (!_energyCore.TryConsumeShot()) return;
+        // Check energy and play appropriate SFX on failure
+        if (!_energyCore.TryConsumeShot())
+        {
+            // SFX: Empty click or overheat
+            if (AudioManager.Instance != null)
+            {
+                AudioClip failClip = _energyCore.CurrentState == GunSystemState.OVERHEAT 
+                    ? gunData.OverheatClip 
+                    : gunData.EmptyClickClip;
+                
+                if (failClip != null)
+                {
+                    AudioManager.Instance.PlaySFX(failClip, FirePoint.position, 1f, gunData.ShootPitchVariation);
+                }
+            }
+            return;
+        }
 
         Vector2 fireDir = SpawnEnergyProjectile(gunData, owner);
+
+        // SFX: Shoot sound
+        if (gunData.ShootClip != null && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(gunData.ShootClip, FirePoint.position, 1f, gunData.ShootPitchVariation);
+        }
 
         ApplyWeaponRecoil(gunData);
         ApplyAimRecoil(gunData);
@@ -325,7 +347,8 @@ public class GunLogic : WeaponLogic
                 _obstacleLayer,
                 owner,
                 _vfxController,
-                _damageTextPrefab
+                _damageTextPrefab,
+                gunData // Pass gunData for SFX
             );
         }
         else

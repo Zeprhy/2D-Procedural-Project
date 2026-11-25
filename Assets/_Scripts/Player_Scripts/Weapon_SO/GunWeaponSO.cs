@@ -44,6 +44,22 @@ public class GunWeaponSO : BaseWeaponSO
     [Header("Prefab Proyektil")]
     [SerializeField] private GameObject _projectilePrefab;
 
+    [Header("SFX Gun")]
+    [Tooltip("Suara tembakan (shoot/pew)")]
+    [SerializeField] private AudioClip _shootClip;
+    [Tooltip("Suara peluru mengenai musuh")]
+    [SerializeField] private AudioClip _impactEnemyClip;
+    [Tooltip("Suara peluru mengenai dinding/rintangan")]
+    [SerializeField] private AudioClip _impactWallClip;
+    [Tooltip("Suara klik kosong (baterai habis)")]
+    [SerializeField] private AudioClip _emptyClickClip;
+    [Tooltip("Suara overheat")]
+    [SerializeField] private AudioClip _overheatClip;
+    [Tooltip("Variasi pitch random untuk shoot (±value)")]
+    [Range(0f, 0.5f)] [SerializeField] private float _shootPitchVariation = 0.1f;
+    [Tooltip("Variasi pitch random untuk impact (±value)")]
+    [Range(0f, 0.5f)] [SerializeField] private float _impactPitchVariation = 0.15f;
+
     // Public Getters
     public float DamagePerShot => _damagePerShot;
     public float FireRate => _fireRate;
@@ -70,6 +86,15 @@ public class GunWeaponSO : BaseWeaponSO
     public float PlayerPushForce => _playerPushForce;
 
     public GameObject ProjectilePrefab => _projectilePrefab;
+
+    // SFX Getters
+    public AudioClip ShootClip => _shootClip;
+    public AudioClip ImpactEnemyClip => _impactEnemyClip;
+    public AudioClip ImpactWallClip => _impactWallClip;
+    public AudioClip EmptyClickClip => _emptyClickClip;
+    public AudioClip OverheatClip => _overheatClip;
+    public float ShootPitchVariation => _shootPitchVariation;
+    public float ImpactPitchVariation => _impactPitchVariation;
 
     private void Reset()
     {

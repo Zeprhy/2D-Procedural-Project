@@ -192,6 +192,13 @@ public class MeleeLogic : WeaponLogic
             _trailVFX.BeginSlash(aimDirection, facingDirection);
         }
 
+        // SFX: Swing/Slash sound
+        if (data != null && data.SwingClip != null && AudioManager.Instance != null)
+        {
+            Vector3 swingPos = _weaponTip != null ? _weaponTip.position : transform.position;
+            AudioManager.Instance.PlaySFX(data.SwingClip, swingPos, 1f, data.SwingPitchVariation);
+        }
+
         // Hitbox tetap aktif sepanjang attack window tanpa terpengaruh penahanan tombol mouse
         float duration = (data != null && data.AttackCooldown > 0f) ? data.AttackCooldown : 0.4f;
 
@@ -274,6 +281,16 @@ public class MeleeLogic : WeaponLogic
                 _vfxController.PlayCriticalHit(contactPoint, hitDirection);
             else
                 _vfxController.PlayNormalHit(contactPoint, hitDirection);
+        }
+
+        // SFX: Hit sound (normal or critical)
+        if (_weaponData is MeleeWeaponSO meleeData && AudioManager.Instance != null)
+        {
+            AudioClip hitClip = isCritical ? meleeData.HitCriticalClip : meleeData.HitNormalClip;
+            if (hitClip != null)
+            {
+                AudioManager.Instance.PlaySFX(hitClip, contactPoint, 1f, meleeData.HitPitchVariation);
+            }
         }
 
         //Camera Shake & Zoom Punch
