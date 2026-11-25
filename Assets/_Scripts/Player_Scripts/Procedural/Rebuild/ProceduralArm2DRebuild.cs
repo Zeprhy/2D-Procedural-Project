@@ -329,7 +329,10 @@ public class ProceduralArm2DRebuild : MonoBehaviour
         if (_handBone != null)
         {
             Quaternion idleRot = ProceduralArmMath2DRebuild.GetIdleHandRotation(_idleAngle, facingDir);
-            _handBone.rotation = Quaternion.Slerp(_handBone.rotation, idleRot, dt * 10f);
+            Quaternion smoothed = Quaternion.Slerp(_handBone.rotation, idleRot, dt * 10f);
+
+            // Recoil ditambahkan langsung (tidak ikut di-Slerp) supaya twitch tetap terlihat saat idle.
+            _handBone.rotation = smoothed * Quaternion.Euler(0f, 0f, _currentRecoil * facingDir);
         }
 
         // Reset reach to minimum

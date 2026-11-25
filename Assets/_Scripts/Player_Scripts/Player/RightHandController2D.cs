@@ -46,14 +46,20 @@ public class RightHandController2D : MonoBehaviour
         // Update aim target from aim tracker
         _proceduralArm.SetAimTarget(_aimTracker.MouseWorldPosition, _aimTracker.IsAimingRight);
 
-        // Apply weapon recoil if gun
-        if (_equippedWeapon is GunLogic gun)
-        {
-            _proceduralArm.AddRecoil(gun.CurrentAimRecoil);
-        }
+        GunLogic gun = _equippedWeapon as GunLogic;
 
-        // Process trigger input
+        // Process trigger input (tembakan terjadi di sini)
         ProcessRightTriggerInput();
+
+        // Konsumsi impulse recoil satu kali per tembakan, bukan mengirim CurrentAimRecoil setiap frame.
+        if (gun != null)
+        {
+            float recoilImpulse = gun.ConsumeArmRecoilImpulse();
+            if (recoilImpulse > 0.0001f)
+            {
+                _proceduralArm.AddRecoil(recoilImpulse);
+            }
+        }
     }
 
     #endregion

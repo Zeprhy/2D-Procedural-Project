@@ -6,7 +6,7 @@ public class GunLogic : WeaponLogic
     [Header("Transform Referensi Senjata Api")]
     [Tooltip("Titik keluarnya proyektil (Muzzle_Point/Fire_Point)")]
     [SerializeField] private Transform _firePoint;
-    [Tooltip("Transform visual sprite senjata untuk kickback visual (jika kosong, auto-detect child Weapon_Sprite)")]
+    [Tooltip("Transform yang menerima recoil visual. Kosongkan untuk memakai root weapon (seluruh visual ikut bergerak).")]
     [SerializeField] private Transform _visualTransform;
 
     [Header("Layer Penyaringan Tabrakan Peluru")]
@@ -43,6 +43,10 @@ public class GunLogic : WeaponLogic
     private float _currentVisualRecoilRot;
     private Vector3 _visualInitialLocalPos = Vector3.zero;
     private Quaternion _visualInitialLocalRot = Quaternion.identity;
+    private Vector3 _lastAppliedLocalPos = Vector3.zero;
+    private Quaternion _lastAppliedLocalRot = Quaternion.identity;
+    private bool _hasVisualRestPose;
+    private float _pendingArmRecoil;
 
     private float _fireCooldownTimer;
     private bool _isTriggerHeld;
@@ -88,17 +92,10 @@ public class GunLogic : WeaponLogic
             }
         }
 
+        // Recoil diterapkan ke root agar Muzzle_Point, Fire_Point, dan Grip_Point ikut bergerak.
+        // Rest pose di-capture saat recoil pertama dipakai, sehingga grip alignment sudah selesai.
         if (_visualTransform == null)
-        {
-            Transform spriteChild = transform.Find("Weapon_Sprite");
-            if (spriteChild != null) _visualTransform = spriteChild;
-        }
-
-        if (_visualTransform != null)
-        {
-            _visualInitialLocalPos = _visualTransform.localPosition;
-            _visualInitialLocalRot = _visualTransform.localRotation;
-        }
+            _visualTransform = transform;
 
         if (_energyBurstRenderer == null)
         {
@@ -168,6 +165,8 @@ public class GunLogic : WeaponLogic
             _overheatSteamParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
         CurrentAimRecoil = 0f;
+        _pendingArmRecoil = 0f;
+        ResetVisualRecoilState();
     }
 
     private void OnDestroy()
@@ -189,6 +188,8 @@ public class GunLogic : WeaponLogic
         _isTriggerHeld = false;
         _fireCooldownTimer = 0f;
         CurrentAimRecoil = 0f;
+        _pendingArmRecoil = 0f;
+        ResetVisualRecoilState();
 
         if (_energyCore != null)
         {
@@ -208,6 +209,17 @@ public class GunLogic : WeaponLogic
     public void SetHandOrientation(bool isRightHand)
     {
         IsRightHand = isRightHand;
+    }
+
+    /// <summary>
+    /// Mengambil total impulse recoil lengan yang tertunda, lalu meresetnya.
+    /// Dipanggil satu kali per frame oleh hand controller, bukan setiap kali Update.
+    /// </summary>
+    public float ConsumeArmRecoilImpulse()
+    {
+        float impulse = _pendingArmRecoil;
+        _pendingArmRecoil = 0f;
+        return impulse;
     }
 
     private void HandleEnergyStateChanged(GunSystemState state)
@@ -328,13 +340,22 @@ public class GunLogic : WeaponLogic
 
     private void ApplyWeaponRecoil(GunWeaponSO gunData)
     {
+        EnsureVisualRestPose();
+
+        // Snapshot kick (bukan akumulasi) agar tembakan berikutnya me-refresh recoil dari nilai penuh.
         _currentVisualRecoilPos = new Vector3(-gunData.WeaponRecoilDistance, 0f, 0f);
         _currentVisualRecoilRot = gunData.WeaponRecoilAngle;
+
+        // Terapkan langsung di frame tembakan supaya muzzle flash memakai posisi visual yang benar.
+        ApplyVisualRecoilPose();
     }
 
     private void ApplyAimRecoil(GunWeaponSO gunData)
     {
         CurrentAimRecoil = Mathf.Min(CurrentAimRecoil + gunData.AimRecoilKick, gunData.MaxAimRecoil);
+
+        // Impulse arm: dikonsumsi satu kali per tembakan oleh hand controller.
+        _pendingArmRecoil = Mathf.Min(_pendingArmRecoil + gunData.AimRecoilKick, gunData.MaxAimRecoil);
     }
 
     private void ApplyPlayerPush(GunWeaponSO gunData, GameObject owner, Vector2 fireDirection)
@@ -357,16 +378,106 @@ public class GunLogic : WeaponLogic
         float weaponRecovery = gunData != null ? gunData.WeaponRecoilRecoverySpeed : 16f;
         float aimRecovery = gunData != null ? gunData.AimRecoilRecoverySpeed : 18f;
 
-        _currentVisualRecoilPos = Vector3.Lerp(_currentVisualRecoilPos, Vector3.zero, Time.deltaTime * weaponRecovery);
-        _currentVisualRecoilRot = Mathf.Lerp(_currentVisualRecoilRot, 0f, Time.deltaTime * weaponRecovery);
+        EnsureVisualRestPose();
 
-        if (_visualTransform != null)
+        // Frame-rate independent ease-out (menggantikan Lerp(dt * speed) yang bisa snap saat FPS rendah).
+        float dt = Time.deltaTime;
+        float visualT = weaponRecovery > 0f ? 1f - Mathf.Exp(-weaponRecovery * dt) : 1f;
+
+        _currentVisualRecoilPos = Vector3.Lerp(_currentVisualRecoilPos, Vector3.zero, visualT);
+        _currentVisualRecoilRot = Mathf.Lerp(_currentVisualRecoilRot, 0f, visualT);
+
+        if (_currentVisualRecoilPos.sqrMagnitude < 0.0000001f && Mathf.Abs(_currentVisualRecoilRot) < 0.0001f)
         {
-            _visualTransform.localPosition = _visualInitialLocalPos + _currentVisualRecoilPos;
-            _visualTransform.localRotation = _visualInitialLocalRot * Quaternion.Euler(0f, 0f, _currentVisualRecoilRot);
+            _currentVisualRecoilPos = Vector3.zero;
+            _currentVisualRecoilRot = 0f;
         }
 
-        CurrentAimRecoil = Mathf.MoveTowards(CurrentAimRecoil, 0f, Time.deltaTime * aimRecovery);
+        ApplyVisualRecoilPose();
+
+        CurrentAimRecoil = Mathf.MoveTowards(CurrentAimRecoil, 0f, dt * aimRecovery);
+    }
+
+    private void EnsureVisualRestPose()
+    {
+        if (_visualTransform == null)
+            _visualTransform = transform;
+
+        if (!_hasVisualRestPose)
+        {
+            CaptureVisualRestPose();
+            return;
+        }
+
+        // Pose ditulis pihak lain (mis. WeaponEquipmentManager.AlignWeaponGrip saat equip / pindah tangan):
+        // jadikan pose tersebut rest pose baru dan batalkan recoil yang sedang berjalan.
+        if (WasVisualPoseWrittenExternally())
+        {
+            _currentVisualRecoilPos = Vector3.zero;
+            _currentVisualRecoilRot = 0f;
+            CaptureVisualRestPose();
+        }
+    }
+
+    private void CaptureVisualRestPose()
+    {
+        _visualInitialLocalPos = _visualTransform.localPosition;
+        _visualInitialLocalRot = _visualTransform.localRotation;
+        _lastAppliedLocalPos = _visualInitialLocalPos;
+        _lastAppliedLocalRot = _visualInitialLocalRot;
+        _hasVisualRestPose = true;
+    }
+
+    private bool WasVisualPoseWrittenExternally()
+    {
+        if (_visualTransform == null) return false;
+
+        if ((_visualTransform.localPosition - _lastAppliedLocalPos).sqrMagnitude > 0.000001f)
+            return true;
+
+        return Quaternion.Angle(_visualTransform.localRotation, _lastAppliedLocalRot) > 0.01f;
+    }
+
+    private void ApplyVisualRecoilPose()
+    {
+        if (!_hasVisualRestPose || _visualTransform == null) return;
+
+        // Rotasi lokal +Z selalu mengangkat moncong, termasuk saat GFX di-mirror (scale.x = -1),
+        // karena mirror horizontal tidak membalik sumbu Y lokal.
+        Quaternion recoilRotation = Quaternion.Euler(0f, 0f, _currentVisualRecoilRot);
+        Vector3 kickback = _visualInitialLocalRot * _currentVisualRecoilPos;
+
+        if (_visualTransform == transform)
+        {
+            // Orbit mengelilingi grip (origin holder) agar grip tidak lepas dari tangan saat moncong terangkat.
+            _visualTransform.localPosition = recoilRotation * (_visualInitialLocalPos + kickback);
+            _visualTransform.localRotation = recoilRotation * _visualInitialLocalRot;
+        }
+        else
+        {
+            _visualTransform.localPosition = _visualInitialLocalPos + kickback;
+            _visualTransform.localRotation = _visualInitialLocalRot * recoilRotation;
+        }
+
+        // Simpan pose yang kita tulis, supaya perubahan dari luar bisa dibedakan saat recovery berikutnya.
+        _lastAppliedLocalPos = _visualTransform.localPosition;
+        _lastAppliedLocalRot = _visualTransform.localRotation;
+    }
+
+    private void ResetVisualRecoilState()
+    {
+        _currentVisualRecoilPos = Vector3.zero;
+        _currentVisualRecoilRot = 0f;
+
+        // Jangan menimpa pose yang baru saja di-align pihak lain (mis. pindah tangan).
+        if (_hasVisualRestPose && _visualTransform != null && !WasVisualPoseWrittenExternally())
+        {
+            _visualTransform.localPosition = _visualInitialLocalPos;
+            _visualTransform.localRotation = _visualInitialLocalRot;
+        }
+
+        // Capture ulang di Update berikutnya (aman bila grip di-align lagi saat object disabled).
+        _hasVisualRestPose = false;
     }
 
     #endregion
