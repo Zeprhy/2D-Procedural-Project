@@ -2648,10 +2648,14 @@ MonoBehaviour:
   _groundLayer:
     serializedVersion: 2
     m_Bits: 1024
+  _groundGraceTime: 0.08
+  _groundGraceFallSpeed: 2.5
   _stepHeight: 0.55
   _stepSearchDist: 0.4
   _maxSlopeAngle: 45
   _stairFaceMinAngle: 80
+  _stepClimbSpeed: 4.5
+  _treadProbeForward: 0.12
   _stopVelocityThreshold: 0.15
   _reversalAcceleration: 15
 --- !u!1 &7469781701559126101
@@ -2788,6 +2792,22 @@ MonoBehaviour:
   _stairTreadProbeDistance: 0.14
   _landingContactTolerance: 0.02
   _landingDampSpeed: 16
+  _groundGraceDuration: 0.08
+  _airborneVelocityThreshold: 2.5
+  _walkEnterSpeed: 0.18
+  _walkExitSpeed: 0.08
+  _walkEnterDelay: 0.05
+  _walkExitDelay: 0.1
+  _stepRetryCooldown: 0.05
+  _momentumStepSpeed: 0.7
+  _stepTriggerRatio: 0.75
+  _stepRearmRatio: 0.35
+  _stepCooldown: 0.06
+  _stepPredictionLead: 0.05
+  _slopeStrideScale: 0.15
+  _stepSwingRoll: 0
+  _enableFootstepEvents: 1
+  _drawDebugGizmos: 1
 --- !u!4 &7469781701598909632
 Transform:
   m_ObjectHideFlags: 0
@@ -3553,12 +3573,22 @@ MonoBehaviour:
   _legController: {fileID: 7469781701559126106}
   _facingReference: {fileID: 7469781702054462226}
   _walkBobAmount: 0.06
-  _smoothFollowSpeed: 12
+  _positionSmoothTime: 0.07
+  _bobBlendTime: 0.12
   _idleBreathingAmount: 0.025
   _breathingFrequency: 2.5
   _maxLandingDip: 0.075
   _landingDipRecoverySpeed: 0.2
+  _groundStableTime: 0.06
+  _minAirTimeForLanding: 0.1
+  _landingCooldown: 0.25
+  _landingMinFallSpeed: 2
+  _accelSmoothing: 0.08
+  _accelDeadzone: 3
   _forwardWalkLeanAngle: 4.5
+  _slopeTiltWeight: 0.5
+  _slopeTiltSpeed: 8
+  _maxSlopeTiltAngle: 45
   _maxInertiaTilt: 6
   _tiltSensitivity: 0.8
   _tiltRecoverySpeed: 10
