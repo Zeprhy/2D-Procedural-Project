@@ -29,6 +29,12 @@ public class DummyEntity : MonoBehaviour, IDamageable
     [Header("Fisika Reaksi (Knockback)")]
     [SerializeField] private float _knockbackResistance = 0f;
 
+    [Header("Referensi Animasi")]
+    [Tooltip("Komponen pengatur state animasi. Jika kosong, dicari otomatis di children.")]
+    [SerializeField] private DummyAnimationController _animationController;
+    [Tooltip("Jeda sebelum objek dihancurkan setelah animasi Death selesai")]
+    [SerializeField] private float _deathDestroyDelay = 1.6f;
+
     private float _currentHealth;
     private SpriteRenderer _spriteRenderer;
     private Material _originalMaterial;
@@ -36,6 +42,7 @@ public class DummyEntity : MonoBehaviour, IDamageable
     private Coroutine _flashRoutine;
     private Coroutine _squashRoutine;
     private Rigidbody2D _rb;
+    private bool _isDead;
 
     private void Awake()
     {
@@ -43,6 +50,9 @@ public class DummyEntity : MonoBehaviour, IDamageable
         _rb.freezeRotation = true;
 
         _spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+
+        if (_animationController == null)
+            _animationController = GetComponentInChildren<DummyAnimationController>();
 
         if (_visualTransform == null && _spriteRenderer != null)
         {
@@ -72,17 +82,29 @@ public class DummyEntity : MonoBehaviour, IDamageable
     public void TakeDamage(float damageAmount) => TakeDamage(damageAmount, Vector2.zero);
     public void TakeDamage(float damageAmount, Vector2 knockbackForce)
     {
+        if (_isDead) return;
+
         ApplyKnockback(knockbackForce);
         TriggerHitFlash();
-        TriggerSquashAndStretch();
 
         if (_entityData != null && _entityData.IsImmortal)
+        {
+            TriggerSquashAndStretch();
+            if (_animationController != null) _animationController.PlayHit();
             return;
+        }
 
         _currentHealth -= damageAmount;
 
         if (_currentHealth <= 0)
+        {
             Die();
+        }
+        else
+        {
+            TriggerSquashAndStretch();
+            if (_animationController != null) _animationController.PlayHit();
+        }
     }
 
     private void ApplyKnockback(Vector2 force)
@@ -239,7 +261,24 @@ public class DummyEntity : MonoBehaviour, IDamageable
 
     private void Die()
     {
-        Debug.Log($"<color=red>[DEAD]</color> {_entityData.EntityName} hancur!");
-        Destroy(gameObject);
+        if (_isDead) return;
+        _isDead = true;
+
+        if (_animationController != null) _animationController.PlayDeath();
+
+        // Hentikan fisika & collider agar tidak bisa dipukul lagi selama animasi Death
+        if (_rb != null)
+        {
+            _rb.linearVelocity = Vector2.zero;
+            _rb.simulated = false;
+        }
+
+        foreach (var col in GetComponentsInChildren<Collider2D>())
+            col.enabled = false;
+
+        string entityName = _entityData != null ? _entityData.EntityName : name;
+        Debug.Log($"<color=red>[DEAD]</color> {entityName} hancur!");
+
+        Destroy(gameObject, Mathf.Max(0.01f, _deathDestroyDelay));
     }
 }

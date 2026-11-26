@@ -12,6 +12,8 @@ GameObject:
   - component: {fileID: 6689794220018619315}
   - component: {fileID: 510632423918240436}
   - component: {fileID: 8991352937270247875}
+  - component: {fileID: -7320862637739934808}
+  - component: {fileID: 1118397164565574647}
   m_Layer: 12
   m_Name: Dummy
   m_TagString: Untagged
@@ -57,6 +59,8 @@ MonoBehaviour:
   _stretchDuration: 0.07
   _recoverDuration: 0.1
   _knockbackResistance: 0
+  _animationController: {fileID: 1140000000000000002}
+  _deathDestroyDelay: 1.6
 --- !u!50 &510632423918240436
 Rigidbody2D:
   serializedVersion: 5
@@ -117,6 +121,41 @@ MonoBehaviour:
   _vfxLifetime: 0.08
   _sortingLayerName: Default
   _sortingOrder: 100
+--- !u!114 &-7320862637739934808
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1487753632079592930}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3289ccd5d8b04403a73bb061ceb3457a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DummyAnimationController
+  _animator: {fileID: 1118397164565574647}
+--- !u!95 &1118397164565574647
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1487753632079592930}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: c0e3668e17c649cfbef221fa17f751af, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &4935804121130318076
 GameObject:
   m_ObjectHideFlags: 0
@@ -128,6 +167,7 @@ GameObject:
   - component: {fileID: 1387071690084688325}
   - component: {fileID: 6540000952149194187}
   - component: {fileID: 4805749190885413751}
+  - component: {fileID: 1140000000000000002}
   m_Layer: 12
   m_Name: Visual
   m_TagString: Untagged
@@ -145,8 +185,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 5329088243806444860}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -199,8 +239,8 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_MaskInteraction: 0
-  m_Sprite: {fileID: -9095717837082945937, guid: 207ee8102dd4143d288186ef0be518ee, type: 3}
-  m_Color: {r: 0.03601989, g: 0.24528301, b: 0.0161979, a: 1}
+  m_Sprite: {fileID: 21300000, guid: b7378138d377bbb40af9001a6f86fd9e, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -246,3 +286,16 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0}
   m_Size: {x: 1, y: 2}
   m_Direction: 0
+--- !u!114 &1140000000000000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4935804121130318076}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3289ccd5d8b04403a73bb061ceb3457a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DummyAnimationController
+  _animator: {fileID: 0}
