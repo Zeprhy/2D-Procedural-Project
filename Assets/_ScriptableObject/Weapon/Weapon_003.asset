@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MeleeWeaponSO
   _weaponID: Weapon_001
   _weaponName: Sword
-  _weaponIcon: {fileID: 0}
+  _weaponIcon: {fileID: 3484287900037411390, guid: 098ad49204c6a974bb450e24646ef919, type: 3}
   _weight: 12
   weaponHandType: 0
   _triggerMode: 0
@@ -22,6 +22,22 @@ MonoBehaviour:
   _weaponPrefab: {fileID: 6231095779114141848, guid: 5db1e247d0fc942418e8df66ec6ef7b4, type: 3}
   _secondaryWeaponPrefab: {fileID: 6231095779114141848, guid: 5db1e247d0fc942418e8df66ec6ef7b4, type: 3}
   _worldItemSprite: {fileID: 21300000, guid: a51e0c5e729483f49bb802ac23d6bec5, type: 3}
+  _overrideArmConfig: 0
+  _minReach: 0.2
+  _maxReach: 0.58
+  _springStiffness: 130
+  _springDamping: 14
+  _minAimAngle: -55
+  _maxAimAngle: 70
+  _aimLagTime: 0.12
+  _handAngleOffset: -20
+  _idleOffset: {x: 0.12, y: -0.35}
+  _idleAngle: -65
   _damage: 25
   _attackCooldown: 0.4
   _slashArcAngle: 110
+  _swingClip: {fileID: 8300000, guid: c24752954a6d0ca4da36c0eb68b9f59b, type: 3}
+  _hitNormalClip: {fileID: 8300000, guid: 53d376c7b1d9d794ab1f3df64bf8be3f, type: 3}
+  _hitCriticalClip: {fileID: 8300000, guid: 1fbee79e1a3cbaf4eb3ad33c4c6f39f5, type: 3}
+  _swingPitchVariation: 0.1
+  _hitPitchVariation: 0.15
