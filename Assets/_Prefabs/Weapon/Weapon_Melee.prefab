@@ -438,11 +438,11 @@ MonoBehaviour:
   _criticalHitStopDuration: 0.09
   _vfxController: {fileID: 3701375873531461409}
   _damageTextPrefab: {fileID: 6164039436554372379, guid: 70aa6f87fc8f2794eab96c01cd910dbd, type: 3}
-  _damageInterval: 0.2
+  _damageInterval: 0.28
   _targetLayer:
     serializedVersion: 2
     m_Bits: 4096
-  _trailVFX: {fileID: 0}
+  _trailVFX: {fileID: 1555302440061728308}
   _weaponTip: {fileID: 5520168608187157376}
   _maxTrajectorySamples: 5
   _maxSampleTimeWindow: 0.08
