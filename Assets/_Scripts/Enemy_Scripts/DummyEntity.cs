@@ -32,8 +32,8 @@ public class DummyEntity : MonoBehaviour, IDamageable
     [Header("Referensi Animasi")]
     [Tooltip("Komponen pengatur state animasi. Jika kosong, dicari otomatis di children.")]
     [SerializeField] private DummyAnimationController _animationController;
-    [Tooltip("Jeda sebelum objek dihancurkan setelah animasi Death selesai")]
-    [SerializeField] private float _deathDestroyDelay = 1.6f;
+    [Tooltip("Jeda sebelum dummy bangun kembali (revive) setelah animasi Death")]
+    [SerializeField] private float _respawnDelay = 3.0f;
 
     private float _currentHealth;
     private SpriteRenderer _spriteRenderer;
@@ -279,6 +279,42 @@ public class DummyEntity : MonoBehaviour, IDamageable
         string entityName = _entityData != null ? _entityData.EntityName : name;
         Debug.Log($"<color=red>[DEAD]</color> {entityName} hancur!");
 
-        Destroy(gameObject, Mathf.Max(0.01f, _deathDestroyDelay));
+        // Mulai siklus revive: dummy tidak dihancurkan, melainkan bangun kembali
+        StartCoroutine(ReviveRoutine());
+    }
+
+    /// <summary>
+    /// Setelah jeda respawn, dummy bangun kembali dari animasi Death
+    /// ke state Idle tanpa perlu destroy objek.
+    /// </summary>
+    private IEnumerator ReviveRoutine()
+    {
+        // Tunggu jeda sebelum bangun kembali
+        yield return new WaitForSeconds(_respawnDelay);
+
+        // Reset health
+        if (_entityData != null)
+            _currentHealth = _entityData.MaxHealth;
+
+        // Aktifkan kembali fisika & collider
+        if (_rb != null)
+            _rb.simulated = true;
+
+        foreach (var col in GetComponentsInChildren<Collider2D>())
+            col.enabled = true;
+
+        _isDead = false;
+
+        // Kembalikan ke animasi Idle
+        if (_animationController != null)
+            _animationController.PlayIdle();
+
+        // Reset visual state sebelum efek juicy
+        if (_visualTransform != null)
+            _visualTransform.localScale = _originalScale;
+
+        // Efek juicy saat bangkit kembali
+        TriggerSquashAndStretch();
+        TriggerHitFlash();
     }
 }

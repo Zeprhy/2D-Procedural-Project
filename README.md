@@ -128,7 +128,7 @@ Controller: `Assets/War/Straw Training Dummy - Pixel Art/Animations/Straw Traini
 - `AnyState → Hit` : saat trigger `Hit` (instan)
 - `AnyState → Death` : saat trigger `Dead` (instan)
 - `Hit → Idle` : otomatis setelah animasi Hit selesai
-- `Death` : menahan frame terakhir, objek dihancurkan setelah `_deathDestroyDelay` (default 1.6s)
+- `Death` : menahan frame terakhir, objek dihancurkan dan kemudian dibangkitkan kembali setelah `_respawnDelay` detik (default 3.0s)
 
 ---
 

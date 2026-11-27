@@ -59,7 +59,7 @@ MonoBehaviour:
   _recoverDuration: 0.1
   _knockbackResistance: 0
   _animationController: {fileID: 1140000000000000002}
-  _deathDestroyDelay: 1.6
+  _respawnDelay: 3.0
 --- !u!50 &510632423918240436
 Rigidbody2D:
   serializedVersion: 5

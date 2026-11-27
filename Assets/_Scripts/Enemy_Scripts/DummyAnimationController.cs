@@ -29,14 +29,15 @@ public class DummyAnimationController : MonoBehaviour
         PlayIdle();
     }
 
-    /// <summary>Kembali ke state Idle (loop).</summary>
+    /// <summary>Kembali ke state Idle (loop). Juga me-reset flag IsDead.</summary>
     public void PlayIdle()
     {
-        if (IsDead || _animator == null) return;
+        if (_animator == null) return;
 
         _animator.ResetTrigger(HitHash);
         _animator.ResetTrigger(DeadHash);
         _animator.Play(IdleStateName, 0, 0f);
+        IsDead = false;
     }
 
     /// <summary>Mainkan animasi Hit sekali, lalu otomatis kembali ke Idle.</summary>
