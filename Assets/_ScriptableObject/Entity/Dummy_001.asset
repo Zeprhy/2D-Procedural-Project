@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BaseEntitySO
   _entityID: Dummy_001
   _entityName: Dummy
-  _maxHealth: 999
-  _isImmortal: 1
+  _maxHealth: 100
+  _isImmortal: 0
